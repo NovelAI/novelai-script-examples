@@ -21,3 +21,5 @@ This repository contains a collection of scripting examples for use with NovelAI
 - `Thought Generator.naiscript`: A script that generates character thoughts based on the story context. A character profile can be set to influence the generated thoughts.
 
 - `Retry Harder.naiscript`: A script that provides an alternative retry button with special prompting.
+
+- `TTS with Character Voices.naiscript`: A script that allows reading stories with assigned character voices.

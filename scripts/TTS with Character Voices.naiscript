@@ -1,0 +1,1425 @@
+/*---
+compatibilityVersion: naiscript-1.0
+id: 065a66f9-4cad-4c2f-a365-e25e7d56a3f5
+name: TTS with Character Voices
+createdAt: 1760963393243
+updatedAt: 1766059048166
+version: 2.2.0
+author: Sonnet 4.5 ft. finetune
+description: |-
+  This script lets you have TTS read your story, or parts of it, while allowing you to assign voices to different characters.
+
+  Sonnet wrote the JS.
+memoryLimit: 128
+---*/
+// ===== CONSTANTS =====
+const ASSISTANT_TOKEN = "<|assistant|>";
+const USER_TOKEN = "<|user|>";
+const THINK_TOKEN = "<think>";
+const THINK_END_TOKEN = "</think>";
+const CHUNK_SIZE = 4000;
+const MAX_GENS_BEFORE_PAUSE = 5;
+const THREE_BACKTICKS = "```";
+
+// Name pools for unnamed speakers
+const MALE_NAMES = [
+  "james", "john", "robert", "michael", "william",
+  "david", "richard", "joseph", "thomas", "charles",
+  "christopher", "daniel", "matthew", "anthony", "donald",
+  "mark", "paul", "steven", "andrew", "kenneth"
+];
+
+const FEMALE_NAMES = [
+  "mary", "patricia", "jennifer", "linda", "barbara",
+  "elizabeth", "susan", "jessica", "sarah", "karen",
+  "nancy", "lisa", "betty", "margaret", "sandra",
+  "ashley", "dorothy", "kimberly", "emily", "donna"
+];
+
+// ===== TEXT SEGMENTATION =====
+function splitQuotedAndSentences(text: string): string[] {
+    const QUOTE_OPENERS = new Set([
+        '\u0022', '\u201c', '\u201d', '\u201e', '\u201f', '\u2033',
+        '\u0027', '\u2018', '\u2019', '\u201a', '\u201b',
+        '\u0060', '\u00b4', '\u00ab', '\u00bb', '\u2039', '\u203a',
+        '\u300c', '\u300d', '\u300e', '\u300f', '\u300a', '\u300b', '\u3008', '\u3009',
+    ]);
+    
+    const BRACKET_OPENERS = new Set([
+        '(', '[', '{', '\u27e8', '\uff08', '\u3010', '\u3014',
+    ]);
+    
+    const ALL_OPENERS = new Set([...QUOTE_OPENERS, ...BRACKET_OPENERS]);
+    
+    const PAIRS: Record<string, string[]> = {
+        '\u0022': ['\u0022', '\u201d', '\u201c', '\u2033'],
+        '\u0027': ['\u0027', '\u2019', '\u2018'],
+        '\u201c': ['\u201d', '\u0022'],
+        '\u201d': ['\u201c', '\u0022', '\u201d'],
+        '\u201e': ['\u201d', '\u201c', '\u0022'],
+        '\u201f': ['\u201d', '\u0022'],
+        '\u2033': ['\u2033', '\u0022'],
+        '\u2018': ['\u2019', '\u0027'],
+        '\u2019': ['\u2018', '\u0027', '\u2019'],
+        '\u201a': ['\u2019', '\u0027'],
+        '\u201b': ['\u2019', '\u0027'],
+        '\u0060': ['\u0060', '\u0027', '\u2019', '\u00b4'],
+        '\u00b4': ['\u00b4', '\u0060', '\u0027'],
+        '\u00ab': ['\u00bb'],
+        '\u00bb': ['\u00ab'],
+        '\u2039': ['\u203a'],
+        '\u203a': ['\u2039'],
+        '\u300c': ['\u300d'],
+        '\u300e': ['\u300f'],
+        '\u300a': ['\u300b'],
+        '\u3008': ['\u3009'],
+        '(': [')'],
+        '[': [']'],
+        '{': ['}'],
+        '\u27e8': ['\u27e9'],
+        '\uff08': ['\uff09'],
+        '\u3010': ['\u3011'],
+        '\u3014': ['\u3015'],
+    };
+    
+    const SENTENCE_ENDERS = new Set([
+        '.', '!', '?', '\u3002', '\uff01', '\uff1f', '\u061f', '\u06d4',
+        '\u0964', '\u0965', '\u1362', '\u055d', '\u0589', '\u055c', '\u055e',
+        '\u104a', '\u104b', '\u166e', '\u2025', '\u2026',
+        '\u2047', '\u2048', '\u2049', '\ufe52', '\ufe55', '\ufe56',
+    ]);
+    
+    const LIKELY_CLOSERS = new Set([
+        '\u300d', '\u300f', '\u300b', '\u3009', '\u2019', '\u201d',
+    ]);
+    
+    const isWordChar = (c: string) => /[\w\u00C0-\u024F\u1E00-\u1EFF\u0400-\u04FF\u4E00-\u9FFF\u3400-\u4DBF\uAC00-\uD7AF\u0600-\u06FF\u0750-\u077F\u0590-\u05FF\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F]/.test(c);
+    
+    const isApostrophe = (text: string, i: number) => {
+        const char = text[i];
+        if (char !== '\u0027' && char !== '\u2019') return false;
+        
+        const prevChar = i > 0 ? text[i - 1] : '';
+        const nextChar = i < text.length - 1 ? text[i + 1] : '';
+        
+        if (isWordChar(prevChar) && isWordChar(nextChar)) {
+            return true;
+        }
+        
+        if (isWordChar(prevChar) && /\s/.test(nextChar)) {
+            let j = i + 1;
+            while (j < text.length && /\s/.test(text[j])) {
+                j++;
+            }
+            if (j < text.length && isWordChar(text[j])) {
+                return true;
+            }
+        }
+        
+        return false;
+    };
+    
+    const segments: string[] = [];
+    let i = 0;
+    const current: string[] = [];
+    let atBoundary = true;
+    
+    const flush = () => {
+        const s = current.join('').trim();
+        if (s) segments.push(s);
+        current.length = 0;
+    };
+    
+    const endsWithComma = () => {
+        const s = current.join('').trimEnd();
+        return s.endsWith(',');
+    };
+    
+    const containsSentenceEnder = (s: string) => {
+        for (const c of s) {
+            if (SENTENCE_ENDERS.has(c)) return true;
+        }
+        return false;
+    };
+    
+    while (i < text.length) {
+        if (text[i] === '\n') {
+            flush();
+            segments.push('');
+            i++;
+            atBoundary = true;
+            continue;
+        }
+        
+        const wsStart = i;
+        while (i < text.length && /\s/.test(text[i]) && text[i] !== '\n') {
+            i++;
+        }
+        
+        if (current.length > 0 && i > wsStart) {
+            current.push(text.substring(wsStart, i));
+        }
+        
+        if (i >= text.length) break;
+        
+        if (ALL_OPENERS.has(text[i]) && !isApostrophe(text, i)) {
+            const isLikelyCloser = current.length > 0 && LIKELY_CLOSERS.has(text[i]);
+            
+            if (isLikelyCloser) {
+                current.push(text[i]);
+                i++;
+                flush();
+                atBoundary = true;
+                continue;
+            }
+            
+            const opener = text[i];
+            const isBracket = BRACKET_OPENERS.has(opener);
+            const closers = new Set(PAIRS[opener] || []);
+            
+            const startPos = i;
+            i++;
+            
+            while (i < text.length && text[i] !== '\n') {
+                if (closers.has(text[i]) && !isApostrophe(text, i)) {
+                    i++;
+                    break;
+                }
+                i++;
+            }
+            
+            let content = text.substring(startPos, i);
+            let isSentenceLevel = false;
+            let peek: number = i;
+            let followedComma: boolean = false;
+            
+            if (isBracket) {
+                if (atBoundary && containsSentenceEnder(content)) {
+                    isSentenceLevel = true;
+                }
+            } else {
+                const endsComma = content.trimEnd().endsWith(',');
+                const precededComma = endsWithComma();
+                
+                peek = i;
+                while (peek < text.length && text[peek] === ' ') peek++;
+                followedComma = peek < text.length && text[peek] === ',';
+                
+                if (atBoundary || precededComma || endsComma || followedComma) {
+                    isSentenceLevel = true;
+                }
+            }
+            
+            if (isSentenceLevel) {
+                flush();
+                
+                if (!isBracket && followedComma) {
+                    i = peek + 1;
+                    content = text.substring(startPos, i);
+                }
+                
+                segments.push(content);
+                atBoundary = false;
+                
+                if (content.trimEnd() && SENTENCE_ENDERS.has(content.trimEnd().slice(-1))) {
+                    atBoundary = true;
+                }
+            } else {
+                current.push(content);
+                atBoundary = false;
+            }
+        } else {
+            const textStart = i;
+            let foundTerminator = false;
+            
+            while (i < text.length) {
+                if (ALL_OPENERS.has(text[i]) && !isApostrophe(text, i)) {
+                    if (i > textStart) {
+                        const accumulated = text.substring(textStart, i);
+                        current.push(accumulated);
+                        if (accumulated.trim()) atBoundary = false;
+                    }
+                    foundTerminator = true;
+                    break;
+                }
+                
+                if (SENTENCE_ENDERS.has(text[i])) {
+                    i++;
+                    current.push(text.substring(textStart, i));
+                    flush();
+                    atBoundary = true;
+                    
+                    while (i < text.length && SENTENCE_ENDERS.has(text[i])) {
+                        i++;
+                    }
+                    foundTerminator = true;
+                    break;
+                }
+                
+                if (text[i] === '\n') {
+                    current.push(text.substring(textStart, i));
+                    foundTerminator = true;
+                    break;
+                }
+                
+                i++;
+            }
+            
+            if (!foundTerminator && i > textStart) {
+                const accumulated = text.substring(textStart, i);
+                current.push(accumulated);
+                if (accumulated.trim()) atBoundary = false;
+            }
+        }
+    }
+    
+    flush();
+    return segments;
+}
+
+// ===== STATE =====
+// Updated type: update and close now return Promises
+let statusWindow: { 
+  update: (options: Partial<WindowOptions>) => Promise<void>; 
+  close: () => Promise<void>; 
+  isClosed: () => boolean;
+  closed: Promise<void> 
+} | null = null;
+let generationCount = 0;
+let continueCallback: (() => void) | null = null;
+let currentCharCounts = { reasoning: 0, output: 0 };
+let isProcessing = false;
+let unnamedVoiceMap: Record<string, string> = {};
+let usedMaleNames: string[] = [];
+let usedFemaleNames: string[] = [];
+let showSettings = false;
+let currentStoryId: string | null = null;
+let tempNewCharacter = "";
+let accumulatedText = "";
+
+// ===== STORAGE HELPERS =====
+
+async function getStoryId(): Promise<string | null> {
+  if (!currentStoryId) {
+    try {
+      currentStoryId = await api.v1.story.id();
+    } catch (e) {
+      return null;
+    }
+  }
+  return currentStoryId;
+}
+
+async function getStoryStorage(key: string): Promise<any> {
+  return await api.v1.storyStorage.get(key);
+}
+
+async function setStoryStorage(key: string, value: any): Promise<void> {
+  return await api.v1.storyStorage.set(key, value);
+}
+
+async function deleteStoryStorage(key: string): Promise<void> {
+  return await api.v1.storyStorage.remove(key);
+}
+
+// ===== UTILITY FUNCTIONS =====
+
+// Now async since statusWindow.update() returns Promise
+async function updateStatusWindow(message: string, showContinue: boolean = false): Promise<void> {
+  if (!statusWindow) return;
+  
+  const content: UIPart[] = [
+    {
+      type: "text",
+      text: `**Status:** ${message}`,
+      markdown: true,
+      style: { marginBottom: "10px" }
+    }
+  ];
+  
+  if (isProcessing) {
+    content.push({
+      type: "text",
+      text: `**Current Generation:**  \n- Reasoning characters: ${currentCharCounts.reasoning}  \n- Output characters: ${currentCharCounts.output}`,
+      markdown: true,
+      style: { marginBottom: "10px", fontSize: "12px" }
+    });
+  }
+  
+  if (showContinue) {
+    content.push({
+      type: "button",
+      text: "Continue Processing",
+      callback: () => {
+        if (continueCallback) {
+          const cb = continueCallback;
+          continueCallback = null;
+          updateStatusWindow("Resuming processing...");
+          cb();
+        }
+      },
+      style: { marginTop: "10px" }
+    });
+  }
+  
+  await statusWindow.update({
+    content: content
+  });
+}
+
+// Now async since ui.window.open() returns Promise
+async function openStatusWindow(): Promise<void> {
+  if (statusWindow) {
+    await statusWindow.close();
+  }
+  
+  statusWindow = await api.v1.ui.window.open({
+    title: "TTS Processing Status",
+    defaultWidth: 400,
+    defaultHeight: 280,
+    minWidth: 300,
+    minHeight: 200,
+    resizable: true,
+    content: [
+      {
+        type: "text",
+        text: "**Status:** Initializing...",
+        markdown: true
+      }
+    ]
+  });
+  
+  statusWindow.closed.then(() => {
+    statusWindow = null;
+  });
+}
+
+async function waitForContinue(): Promise<void> {
+  return new Promise((resolve) => {
+    continueCallback = resolve;
+    updateStatusWindow("Waiting for user to continue (rate limit protection)...", true);
+  });
+}
+
+function splitIntoChunks(text: string, chunkSize: number): string[] {
+  if (text.length <= chunkSize) {
+    return [text];
+  }
+  
+  const chunks: string[] = [];
+  let start = 0;
+  
+  while (start < text.length) {
+    let end = Math.min(start + chunkSize, text.length);
+    
+    if (end < text.length) {
+      const lastNewline = text.lastIndexOf('\n', end);
+      if (lastNewline > start) {
+        end = lastNewline + 1;
+      }
+    }
+    
+    chunks.push(text.slice(start, end));
+    start = end;
+  }
+  
+  return chunks;
+}
+
+function removeMarkdownCodeblock(text: string): string {
+  text = text.trim();
+  
+  if (text.startsWith('```')) {
+    const firstNewline = text.indexOf('\n');
+    if (firstNewline !== -1) {
+      text = text.slice(firstNewline + 1);
+    }
+  }
+
+  text = text.split('```')[0];
+  
+  return text.trim();
+}
+
+function getRandomName(isMale: boolean): string {
+  const pool = isMale ? MALE_NAMES : FEMALE_NAMES;
+  const usedNames = isMale ? usedMaleNames : usedFemaleNames;
+  
+  const availableNames = pool.filter(name => !usedNames.includes(name));
+  
+  if (availableNames.length === 0) {
+    if (isMale) {
+      usedMaleNames = [];
+    } else {
+      usedFemaleNames = [];
+    }
+    return pool[api.v1.random.int(0, pool.length - 1)];
+  }
+  
+  const selectedName = availableNames[api.v1.random.int(0, availableNames.length - 1)];
+  
+  if (isMale) {
+    usedMaleNames.push(selectedName);
+  } else {
+    usedFemaleNames.push(selectedName);
+  }
+  
+  return selectedName;
+}
+
+// ===== MAIN ANALYZE FUNCTION =====
+
+async function analyzeStory(inputText: string, autoRead: boolean = false): Promise<void> {
+  await openStatusWindow();
+  await updateStatusWindow("Starting analysis...");
+  
+  unnamedVoiceMap = {};
+  usedMaleNames = [];
+  usedFemaleNames = [];
+  
+  const overrideEnabled = await getStoryStorage("override_narrator_enabled");
+  let names: string[] = await getStoryStorage("names") || [];
+  const manualNarratorSex = overrideEnabled ? await getStoryStorage("manual_narrator_sex") : null;
+  const manualFirstPerson = overrideEnabled ? await getStoryStorage("manual_first_person") : false;
+  const storedFirstPersonName = overrideEnabled ? await getStoryStorage("manual_first_person_name") : null;
+  
+  const manualFirstPersonName = (storedFirstPersonName && names.includes(storedFirstPersonName)) ? storedFirstPersonName : null;
+  
+  let narratorSex: string | null = manualNarratorSex || await getStoryStorage("narrator_sex");
+  let firstPersonNarrator: string | null = manualFirstPerson && manualFirstPersonName ? manualFirstPersonName : await getStoryStorage("first_person_narrator");
+  
+  const chunks = splitIntoChunks(inputText, CHUNK_SIZE);
+  await updateStatusWindow(`Split into ${chunks.length} chunk(s)...`);
+  
+  generationCount = 0;
+  
+  const allSegments: { speaker: string; content: string }[] = [];
+  
+  for (let i = 0; i < chunks.length; i++) {
+    await updateStatusWindow(`Processing chunk ${i + 1}/${chunks.length}...`);
+    
+    if (generationCount > 0 && generationCount % MAX_GENS_BEFORE_PAUSE === 0) {
+      await waitForContinue();
+    }
+    
+    const chunk = chunks[i];
+    
+    const segments = splitQuotedAndSentences(chunk);
+    
+    const numberedLines: string[] = [];
+    for (let j = 0; j < segments.length; j++) {
+      if (segments[j] !== '') {
+        numberedLines.push(`${j + 1} ${segments[j]}`);
+      }
+    }
+    const numberedChunk = numberedLines.join('\n');
+    
+    const narratorSexString = narratorSex || "n/a";
+    const namesString = names.length > 0 ? JSON.stringify(names) : "n/a";
+    const firstPersonNarratorString = firstPersonNarrator || "n/a";
+    
+    const prompt = `Audiobook extraction ready.${USER_TOKEN}
+# Text to audiobook JSONL conversion task
+
+## Known information
+
+First person narrator: ${firstPersonNarratorString}
+Narrator sex: ${narratorSexString}
+Known names: ${namesString}
+
+## Text
+
+${THREE_BACKTICKS}
+${numberedChunk}
+${THREE_BACKTICKS}
+
+## Task description
+
+Input format:
+- Text to analyze inside a markdown code block
+- Dialogue between quotation marks ("). Sometimes single quotes are used (')
+- Some speech may be enclosed in angular brackets (<>), mainly used for telepathic communications
+- Sometimes thoughts or indirect speech are not enclosed with anything, but if they would usually be sounded out in a character's voice, they should still be treated like dialogue.
+- Each line in the text above starts with a line number. These line numbers are for your reference only and MUST NOT be included in output as text.
+
+Analyze the text inside the markdown block above. Perform the following tasks:
+- Identify the names of all speakers with lines of dialogue that occur
+- Depending on the overall tone of the text, select a sex for the narrator (non-dialogue) from ["male", "female"]
+- Parse the input text
+
+## Task
+
+Your task is to:
+- Provide the selected sex of the narrator in the "narrator_sex" field as either ["male", "female"]
+- Provide the names of all identified speakers in "lastname, firstname" format in a "names" array
+- If it is not completely clear whether a character has a name (e.g. they are called a nickname, possible alias, something else), using that name is preferable to no name at all
+- If a speaker name occurs in the provided known speakers list, reuse the name as is, unless you can expand on it (e.g. "elara" to "elara smith"). If multiple names seem applicable, pick the most specific/longest.
+- For speakers for whom no name could be identified, name them "unnamed_speaker_1_male", "unnamed_speaker_1_female" and so on, identifying their sex according to your best effort
+- For every segment of text, a line starting with the segment's line number, followed with the speaker's identifier, followed by a colon, followed by the first two words of that segment
+- Keep the name identifiers you provide lowerspace
+- Name identifiers must NEVER contain a colon
+- Include only names of characters that have actual lines of dialogue
+- Only for stories with a first person narrator:
+    - If the first person narrator is one of the characters, set "first_person_character" to that character's name, exactly the way it is included in "names"
+    - Otherwise set "first_person_character" to ${THREE_BACKTICKS}null${THREE_BACKTICKS}
+    - Never set "first_person_character" to "narrator"!
+- Ensure that narrator segmented parts NEVER contain dialogue
+- Ensure that dialogue is NEVER assigned the name of narrator
+- Process the ALL of the text provided without leaving anything out
+- When multiple segments by the same speaker follow consecutively without anything inbetween, they can either be kept separate or merged
+- ALWAYS preserve the order of segments to match the original text
+- If narration is sandwiched by dialogue, NEVER change the order when emitting text segments
+- NEVER skip any segments of any kind!
+- NEVER include the initial line numbers included for your reference in the "content"!
+
+## Example 1
+
+The following is a simple example of how to segment a text with various types of speech.
+
+### Text 1
+
+1 It had been a fun day.
+2 They had met that waitress.
+3 "I wish you all the best"
+4 , she had said.
+5 But now, they were in danger.
+6 The man spoke hurriedly to the woman.
+7 "We don't have time,"
+8 he said.
+9 "Hurry!"
+10 Without hesitation, she responded.
+11 "Calm down first."
+12 How can she be so calm?
+13 He couldn't help but wonder about this person.
+14 Did he really make the right choice, travelling with her?
+15 "Found you!"
+16 Suddenly, a man burst into the window, brandishing an assault rifle.
+17 Leisurely, the attacker began to take aim.
+18 But before he could fire, a voice rang out inside his mind.
+19 <Marcus Smith here. Control says to abort the mission.>
+20 "Hmph! You get away this time!"
+21 He spoke with a harsh voice and continued,
+22 "Don't think this is over."
+23 At the same time, the man remembered the name of the waitress.
+24 She had called herself Daisy.
+
+### Segmentation 1
+
+{"narrator_sex":"male","names":["unnamed_speaker_1_male", "unnamed_speaker_1_female", "unnamed_speaker_2_male", "smith, marcus", "daisy"]}
+1 narrator: It had
+2 narrator: They had
+3 daisy: "I wish
+4 narrator: , she had
+5 narrator: But now
+6 narrator: The man
+7 unnamed_speaker_1_male: "We don't
+8 narrator: he said.
+9 unnamed_speaker_1_male: "Hurry!"
+10 narrator: Without hesitation
+11 unnamed_speaker_1_female: "Calm down
+12 unnamed_speaker_1_male: How can
+13 narrator: He couldn't
+14 narrator: Did he
+15 unnamed_speaker_2_male: "Found you!"
+16 narrator: Suddenly, a
+17 narrator: Leisurely, the
+18 narrator: But before
+19 smith, marcus: <Marcus Smith
+20 unnamed_speaker_2_male: "Hmph! You
+21 narrator: He spoke
+22 unnamed_speaker_2_male: "Don't think
+23 narrator: At the
+24 narrator: She had
+
+## Example 2
+
+The following is a simple example of how to segment a text with a narrator that is also a character of the story. As the narrator has identified herself by name, we can set the first_person_narrator field in this case.
+
+In the case of first person narration, scan the whole text first and see if the narrator identifies themselves by name, or implicitly, as one of the characters. But even in that case, always separate out lines spoken by that character.
+
+### Text 2
+
+1 Today was the day.
+2 I was going to get my revenge.
+3 Honestly, I couldn't help but smile about it.
+4 Yes.
+5 Today, the Empire would suffer at my hands, at the hands of Princess Elara!
+6 "Die, scum!"
+7 I combat rolled into the corridor, my laser blaster flashing.
+8 "AGGGHHHHH!"
+9 General Zhok Ghok hit the ground.
+10 I was filled with glee.
+
+### Segmentation 2
+
+{"narrator_sex":"female","names":["elara", "ghok, zhok"],"first_person_narrator":"elara"}
+1 narrator: Today was
+2 narrator: I was
+3 narrator: Honestly, I
+4 narrator: Yes.
+5 narrator: Today, the
+6 elara: "Die, scum!"
+7 narrator: I combat
+8 ghok, zhok: "AGGGHHHHH!"
+9 narrator: General Zhok
+10 narrator: I was
+
+## Template
+
+The output must be one header JSON line, followed by segment lines starting with segment number, speaker name, a colon and then the first two words of the segment. Follow the template below. ... are obviously placeholders. The first JSON line contains the metadata for narrator and names. All other lines contain text segments. Follow the formatting and the task as described above.
+
+${THREE_BACKTICKS}json
+{"narrator_sex":...,"names":[...,...],"first_person_narrator":...}
+1 ...: ...
+2 ...: ...
+3 ...: ...
+4 ...: ...
+...
+${THREE_BACKTICKS}/nothink${ASSISTANT_TOKEN}
+${THINK_TOKEN}${THINK_END_TOKEN}
+`;
+
+    const defaultParams = await api.v1.generationParameters.get();
+    const maxTokens = Math.floor((await api.v1.tokenizer.encode(chunk, defaultParams.model)).length * 1.2);
+    const requestedMaxTokens = Math.min(Math.max(maxTokens, 512), 1024); // Cap at 1024
+    
+    // Prepare messages for token counting
+    const messages: Message[] = [{ role: "assistant", content: prompt }];
+    
+    // Check input token limits
+    const estimatedInputTokens = api.v1.script.countUncachedInputTokens(messages);
+    const allowedInput = api.v1.script.getAllowedInput();
+    if (allowedInput < estimatedInputTokens) {
+      await updateStatusWindow(`Waiting for input token budget (need ~${estimatedInputTokens}, have ${allowedInput})...`);
+      try {
+        await api.v1.script.waitForAllowedInput(estimatedInputTokens);
+      } catch (e) {
+        api.v1.error("Input token limit wait failed:", e);
+        await updateStatusWindow(`Input token limit error. Please try again later.`);
+        return;
+      }
+    }
+    
+    // Check output token limits
+    const allowedOutput = api.v1.script.getAllowedOutput();
+    if (allowedOutput < requestedMaxTokens) {
+      await updateStatusWindow(`Waiting for output token budget (need ${requestedMaxTokens}, have ${allowedOutput})...`);
+      try {
+        await api.v1.script.waitForAllowedOutput(requestedMaxTokens);
+      } catch (e) {
+        api.v1.error("Output token limit wait failed:", e);
+        await updateStatusWindow(`Output token limit error. Please try again later.`);
+        return;
+      }
+    }
+    
+    isProcessing = true;
+    currentCharCounts = { reasoning: 0, output: 0 };
+    
+    let reasoning = "";
+    let output = "";
+    let inThinking = false;
+    let thinkingComplete = false;
+    let lineBuffer = "";
+    let metadataProcessed = false;
+    let segmentCount = 0;
+    let lastSegmentNum = 0;
+    
+    let currentSpeaker: string | null = null;
+    let segmentBuffer: string[] = [];
+    
+    const flushSegmentBuffer = async (): Promise<void> => {
+      if (segmentBuffer.length > 0 && currentSpeaker !== null) {
+        const combinedContent = segmentBuffer.join(' ');
+        const segment = { content: combinedContent, speaker: currentSpeaker };
+        await queueSegmentForTTS(segment);
+        allSegments.push({ speaker: currentSpeaker, content: combinedContent });
+        segmentBuffer = [];
+        segmentCount++;
+        
+        if (segmentCount % 5 === 0) {
+          updateStatusWindow(`Processing chunk ${i + 1}/${chunks.length}... (${segmentCount} segments)`);
+        }
+      }
+    };
+    
+    const processOutputLine = async (line: string): Promise<void> => {
+      line = line.trim();
+      if (!line) return;
+      
+      if (line.startsWith('```')) return;
+      
+      try {
+        if (!metadataProcessed && line.startsWith('{')) {
+          const parsed = JSON.parse(line);
+          api.v1.log("Metadata:", parsed);
+          
+          if (!manualNarratorSex && parsed.narrator_sex) {
+            narratorSex = parsed.narrator_sex;
+            await setStoryStorage("narrator_sex", narratorSex);
+          }
+          
+          if (parsed.names && Array.isArray(parsed.names)) {
+            const newNames = parsed.names.filter((n: string) => !n.startsWith("unnamed_"));
+            const mergedNames = [...new Set([...names, ...newNames])];
+            names = mergedNames;
+            await setStoryStorage("names", names);
+          }
+          
+          if (!manualFirstPerson && parsed.first_person_narrator !== undefined) {
+            firstPersonNarrator = parsed.first_person_narrator;
+            await setStoryStorage("first_person_narrator", firstPersonNarrator);
+          }
+          
+          metadataProcessed = true;
+        } 
+        else if (metadataProcessed) {
+          const match = line.match(/^(\d+)\s+([^:]+):\s+(.+)$/);
+          if (match) {
+            const segmentNum = parseInt(match[1], 10);
+            const speaker = match[2].trim();
+            
+            while (lastSegmentNum + 1 < segmentNum) {
+              lastSegmentNum++;
+              if (lastSegmentNum <= segments.length && segments[lastSegmentNum - 1] === '') {
+                await flushSegmentBuffer();
+                currentSpeaker = null;
+              }
+            }
+            
+            if (segmentNum > 0 && segmentNum <= segments.length) {
+              const content = segments[segmentNum - 1];
+              
+              if (content !== '') {
+                if (currentSpeaker !== null && currentSpeaker !== speaker) {
+                  await flushSegmentBuffer();
+                }
+                
+                currentSpeaker = speaker;
+                segmentBuffer.push(content);
+              }
+              
+              lastSegmentNum = segmentNum;
+            }
+          }
+        }
+      } catch (e) {
+        api.v1.error("Failed to parse output line:", e, "Line was:", line);
+      }
+    };
+    
+    try {
+      const result = await api.v1.generate(
+        [{ role: "assistant", content: prompt }],
+        {
+          ...defaultParams,
+          max_tokens: requestedMaxTokens,
+          temperature: 0.01,
+          top_p: 0.1,
+          top_k: 1
+        },
+        (choices: GenerationChoice[], final: boolean) => {
+          (async () => {
+            if (!choices || !choices[0]) return;
+            
+            const text = choices[0].text;
+            
+            if (!thinkingComplete) {
+              const thinkIdx = text.indexOf(THINK_TOKEN);
+              if (thinkIdx !== -1 && !inThinking) {
+                inThinking = true;
+              }
+              
+              if (inThinking) {
+                const thinkEndIdx = text.indexOf(THINK_END_TOKEN);
+                if (thinkEndIdx !== -1) {
+                  reasoning += text.substring(0, thinkEndIdx + THINK_END_TOKEN.length);
+                  thinkingComplete = true;
+                  
+                  let restText = text.substring(thinkEndIdx + THINK_END_TOKEN.length);
+                  if (restText.startsWith('\n')) {
+                    restText = restText.substring(1);
+                  }
+                  output += restText;
+                  lineBuffer += restText;
+                  
+                  currentCharCounts.reasoning = reasoning.length;
+                  currentCharCounts.output = output.length;
+                } else {
+                  reasoning += text;
+                  currentCharCounts.reasoning = reasoning.length;
+                }
+              } else {
+                output += text;
+                lineBuffer += text;
+                currentCharCounts.output = output.length;
+              }
+            } else {
+              if (!final) {
+                output += text;
+                lineBuffer += text;
+                currentCharCounts.output = output.length;
+              }
+            }
+            
+            while (lineBuffer.includes('\n')) {
+              const newlineIdx = lineBuffer.indexOf('\n');
+              const completeLine = lineBuffer.substring(0, newlineIdx);
+              lineBuffer = lineBuffer.substring(newlineIdx + 1);
+              
+              await processOutputLine(completeLine);
+            }
+            
+            updateStatusWindow(`Processing chunk ${i + 1}/${chunks.length}... (${segmentCount} segments)`);
+          })();
+        },
+        "background"
+      );
+      
+      isProcessing = false;
+      generationCount++;
+      
+      if (reasoning) {
+        api.v1.log("Reasoning:", reasoning);
+      }
+      
+      if (lineBuffer.trim()) {
+        await processOutputLine(lineBuffer.trim());
+      }
+      
+      await flushSegmentBuffer();
+      
+      while (lastSegmentNum < segments.length) {
+        lastSegmentNum++;
+      }
+      
+      api.v1.log(`Chunk ${i + 1} complete. Total TTS segments queued: ${segmentCount}`);
+    } catch (e: any) {
+      isProcessing = false;
+      // Handle token limit errors gracefully
+      if (e && e.message && (e.message.includes("token") || e.message.includes("limit"))) {
+        await updateStatusWindow(`Generation failed: Token limit exceeded. Please wait and try again.`);
+        api.v1.error("Token limit error:", e);
+        return;
+      }
+      throw e;
+    }
+  }
+  
+  api.v1.log("=== ALL SEGMENTS (JSON) ===");
+  api.v1.log(JSON.stringify(allSegments, null, 2));
+  api.v1.log("=========================");
+  
+  await updateStatusWindow("Analysis complete!");
+  
+  await updatePanel();
+  
+  if (autoRead) {
+    await api.v1.timers.sleep(2000);
+    if (statusWindow) {
+      await statusWindow.close();
+    }
+  }
+}
+
+// ===== TTS FUNCTIONS =====
+
+async function queueSegmentForTTS(segment: { content: string; speaker: string; line?: number }): Promise<void> {
+  const maleNarratorVoice = await getStoryStorage("voice_male_narrator") || "Raid";
+  const femaleNarratorVoice = await getStoryStorage("voice_female_narrator") || "Aini";
+  
+  const detectedNarratorSex = await getStoryStorage("narrator_sex") || "male";
+  const detectedFirstPersonNarrator = await getStoryStorage("first_person_narrator");
+  
+  const overrideEnabled = await getStoryStorage("override_narrator_enabled");
+  const names: string[] = await getStoryStorage("names") || [];
+  const manualNarratorSex = overrideEnabled ? await getStoryStorage("manual_narrator_sex") : null;
+  const manualFirstPerson = overrideEnabled ? await getStoryStorage("manual_first_person") : null;
+  const storedFirstPersonName = manualFirstPerson ? await getStoryStorage("manual_first_person_name") : null;
+  
+  const manualFirstPersonName = (storedFirstPersonName && names.includes(storedFirstPersonName)) ? storedFirstPersonName : null;
+  
+  let voice: string | null = null;
+  
+  if (segment.speaker === "narrator") {
+    let narratorVoice = detectedNarratorSex === "female" ? femaleNarratorVoice : maleNarratorVoice;
+    
+    if (detectedFirstPersonNarrator) {
+      let fpVoice = await getStoryStorage(`voice_${detectedFirstPersonNarrator}`);
+      if (!fpVoice || fpVoice.trim() === "") {
+        const parts = detectedFirstPersonNarrator.split(',');
+        fpVoice = parts.length > 1 ? parts[1].trim() : detectedFirstPersonNarrator;
+      }
+      narratorVoice = fpVoice;
+    }
+    
+    if (manualNarratorSex) {
+      narratorVoice = manualNarratorSex === "female" ? femaleNarratorVoice : maleNarratorVoice;
+    }
+    
+    if (manualFirstPersonName) {
+      let fpVoice = await getStoryStorage(`voice_${manualFirstPersonName}`);
+      if (!fpVoice || fpVoice.trim() === "") {
+        const parts = manualFirstPersonName.split(',');
+        fpVoice = parts.length > 1 ? parts[1].trim() : manualFirstPersonName;
+      }
+      narratorVoice = fpVoice;
+    }
+    
+    voice = narratorVoice;
+  } else if (segment.speaker.startsWith("unnamed_")) {
+    if (!unnamedVoiceMap[segment.speaker]) {
+      const isMale = segment.speaker.includes("_male");
+      unnamedVoiceMap[segment.speaker] = getRandomName(isMale);
+      api.v1.log(`Assigned random voice "${unnamedVoiceMap[segment.speaker]}" for ${segment.speaker}`);
+    }
+    voice = unnamedVoiceMap[segment.speaker];
+  } else {
+    voice = await getStoryStorage(`voice_${segment.speaker}`);
+    if (!voice || voice.trim() === "") {
+      const parts = segment.speaker.split(',');
+      voice = parts.length > 1 ? parts[1].trim() : segment.speaker;
+    }
+  }
+  
+  const options = voice ? { seed: voice } : undefined;
+  await api.v1.tts.queue(segment.content, options);
+}
+
+async function speakSegments(segments: { content: string; speaker: string; line?: number }[]): Promise<void> {
+  await updateStatusWindow(`Queueing ${segments.length} TTS segments...`);
+  
+  for (let i = 0; i < segments.length; i++) {
+    await queueSegmentForTTS(segments[i]);
+    
+    if (i % 10 === 0) {
+      await updateStatusWindow(`Queued ${i + 1}/${segments.length} segments...`);
+    }
+  }
+  
+  await updateStatusWindow(`All ${segments.length} segments queued for TTS!`);
+  
+  await api.v1.timers.sleep(2000);
+  if (statusWindow) {
+    await statusWindow.close();
+  }
+}
+
+// ===== READ FUNCTIONS =====
+
+async function readRecent(): Promise<void> {
+  await updateStatusWindow("Reading recent text...");
+  
+  const paragraphs: { sectionId: number; section: Section; index: number }[] = [];
+  await api.v1.document.scan((sectionId, section, index) => {
+    paragraphs.push({ sectionId, section, index });
+  });
+  
+  const recentParagraphs = paragraphs.slice(-6);
+  let text = recentParagraphs.map(p => p.section.text).join('\n');
+  
+  const allText = paragraphs.map(p => p.section.text).join('\n');
+  if (allText.length > 4000) {
+    const start = allText.length - 4000;
+    const linebreakPos = allText.indexOf('\n', start);
+    if (linebreakPos !== -1) {
+      const last4000 = allText.substring(linebreakPos + 1);
+      if (last4000.length > text.length) {
+        text = last4000;
+      }
+    }
+  }
+  
+  await analyzeStory(text);
+  
+  await updateStatusWindow("All segments queued for TTS!");
+  await api.v1.timers.sleep(2000);
+  if (statusWindow) {
+    await statusWindow.close();
+  }
+}
+
+async function readAll(): Promise<void> {
+  await updateStatusWindow("Reading entire story...");
+  
+  const paragraphs: { sectionId: number; section: Section; index: number }[] = [];
+  await api.v1.document.scan((sectionId, section, index) => {
+    paragraphs.push({ sectionId, section, index });
+  });
+  
+  const text = paragraphs.map(p => p.section.text).join('\n');
+  
+  await analyzeStory(text);
+  
+  await updateStatusWindow("All segments queued for TTS!");
+  await api.v1.timers.sleep(2000);
+  if (statusWindow) {
+    await statusWindow.close();
+  }
+}
+
+async function readSegment(selection: DocumentSelection): Promise<void> {
+  await updateStatusWindow("Reading selected text...");
+  
+  const text = await api.v1.document.textFromSelection({
+    from: selection.from,
+    to: selection.to
+  });
+  
+  await analyzeStory(text);
+  
+  await updateStatusWindow("All segments queued for TTS!");
+  await api.v1.timers.sleep(2000);
+  if (statusWindow) {
+    await statusWindow.close();
+  }
+}
+
+// ===== CHARACTER MANAGEMENT =====
+
+async function addCharacter(name: string): Promise<void> {
+  if (!name || name.trim() === "") return;
+  
+  const lowercaseName = name.trim().toLowerCase();
+  const names: string[] = await getStoryStorage("names") || [];
+  
+  if (!names.includes(lowercaseName)) {
+    names.push(lowercaseName);
+    await setStoryStorage("names", names);
+  }
+  
+  await updatePanel();
+}
+
+async function removeCharacter(name: string): Promise<void> {
+  const names: string[] = await getStoryStorage("names") || [];
+  const filtered = names.filter(n => n !== name);
+  await setStoryStorage("names", filtered);
+  await deleteStoryStorage(`voice_${name}`);
+  await updatePanel();
+}
+
+// ===== UI UPDATE FUNCTION =====
+
+async function updatePanel(): Promise<void> {
+  const names: string[] = (await getStoryStorage("names")) || [];
+  const overrideEnabled = await getStoryStorage("override_narrator_enabled");
+  const manualNarratorSex = await getStoryStorage("manual_narrator_sex");
+  const manualFirstPerson = await getStoryStorage("manual_first_person");
+  const manualFirstPersonName = await getStoryStorage("manual_first_person_name");
+  const autoReadEnabled = await getStoryStorage("auto_read_enabled");
+  
+  let voiceConfigs: UIPart[] = [];
+  
+  if (showSettings) {
+    voiceConfigs = [
+      {
+        type: "checkboxInput",
+        label: "Override Narrator",
+        id: "overrideNarratorCheckbox",
+        storageKey: "story:override_narrator_enabled",
+        onChange: async () => {
+          await updatePanel();
+        },
+        style: { marginTop: "10px", marginBottom: "10px" }
+      }
+    ];
+    
+    if (overrideEnabled) {
+      voiceConfigs.push(
+        {
+          type: "text",
+          text: "**Narrator Overrides**",
+          markdown: true,
+          style: { marginTop: "5px", marginBottom: "5px" }
+        },
+        {
+          type: "row",
+          content: [
+            {
+              type: "text",
+              text: "Narrator Gender:",
+              style: { marginRight: "10px", lineHeight: "32px" }
+            },
+            {
+              type: "button",
+              text: manualNarratorSex === "male" ? "Male ✓" : "Male",
+              callback: async () => {
+                await setStoryStorage("manual_narrator_sex", "male");
+                await updatePanel();
+              },
+              style: { marginRight: "5px" }
+            },
+            {
+              type: "button",
+              text: manualNarratorSex === "female" ? "Female ✓" : "Female",
+              callback: async () => {
+                await setStoryStorage("manual_narrator_sex", "female");
+                await updatePanel();
+              },
+              style: { marginRight: "5px" }
+            }
+          ],
+          style: { marginBottom: "10px" }
+        },
+        {
+          type: "checkboxInput",
+          label: "First Person Narrator",
+          id: "firstPersonCheckbox",
+          storageKey: "story:manual_first_person",
+          onChange: async () => {
+            await updatePanel();
+          },
+          style: { marginBottom: "5px" }
+        }
+      );
+      
+      if (manualFirstPerson) {
+        if (names.length > 0) {
+          voiceConfigs.push({
+            type: "row",
+            content: [
+              {
+                type: "text",
+                text: "First Person Character:",
+                style: { marginRight: "10px", lineHeight: "32px" }
+              },
+              ...names.map((name): UIPartButton => ({
+                type: "button",
+                text: manualFirstPersonName === name ? `${name} ✓` : name,
+                callback: async () => {
+                  await setStoryStorage("manual_first_person_name", name);
+                  await updatePanel();
+                },
+                style: { marginRight: "5px" }
+              }))
+            ],
+            style: { marginBottom: "10px", flexWrap: "wrap" }
+          });
+        } else {
+          voiceConfigs.push({
+            type: "text",
+            text: "*No characters available. Add characters below to select a first person narrator.*",
+            markdown: true,
+            style: { marginBottom: "10px", fontSize: "12px", fontStyle: "italic" }
+          });
+        }
+      }
+    }
+    
+    voiceConfigs.push(
+      {
+        type: "text",
+        text: "**Voice Configuration**",
+        markdown: true,
+        style: { marginTop: "10px", marginBottom: "5px" }
+      },
+      {
+        type: "textInput",
+        label: "Male Narrator Voice",
+        storageKey: "story:voice_male_narrator",
+        placeholder: "male narrator voice seed",
+        style: { marginBottom: "5px" }
+      },
+      {
+        type: "textInput",
+        label: "Female Narrator Voice",
+        storageKey: "story:voice_female_narrator",
+        placeholder: "female narrator voice seed",
+        style: { marginBottom: "10px" }
+      }
+    );
+    
+    if (names.length > 0) {
+      voiceConfigs.push({
+        type: "text",
+        text: "**Character Voices**",
+        markdown: true,
+        style: { marginTop: "10px", marginBottom: "5px" }
+      });
+      
+      for (const name of names) {
+        voiceConfigs.push({
+          type: "row",
+          alignment: "start",
+          content: [
+            {
+              type: "text",
+              text: name,
+              style: { width: "calc(50% - 55px)", marginRight: "10px", marginLeft: "16px", flexShrink: 0 }
+            },
+            {
+              type: "textInput",
+              storageKey: `story:voice_${name}`,
+              placeholder: "Voice override...",
+              style: { width: "calc(50% - 55px)", marginRight: "10px", flexShrink: 0 }
+            },
+            {
+              type: "button",
+              text: "Remove",
+              callback: () => removeCharacter(name),
+              style: { width: "90px", flexShrink: 0 }
+            }
+          ],
+          style: { marginBottom: "5px" }
+        });
+      }
+    }
+    
+    voiceConfigs.push(
+      {
+        type: "text",
+        text: "**Manage Characters**",
+        markdown: true,
+        style: { marginTop: "10px", marginBottom: "5px" }
+      },
+      {
+        type: "row",
+        content: [
+          {
+            type: "textInput",
+            id: "newCharacterInput",
+            initialValue: tempNewCharacter,
+            onChange: (value: string) => {
+              tempNewCharacter = value;
+            },
+            placeholder: "lastname, firstname (lowercase)",
+            style: { flex: 1, marginRight: "5px" }
+          },
+          {
+            type: "button",
+            text: "Add",
+            callback: async () => {
+              if (tempNewCharacter && tempNewCharacter.trim() !== "") {
+                const nameToAdd = tempNewCharacter;
+                tempNewCharacter = "";
+                await addCharacter(nameToAdd);
+              }
+            }
+          }
+        ],
+        style: { marginBottom: "10px" }
+      }
+    );
+  }
+  
+  await api.v1.ui.update([{
+    type: "scriptPanel",
+    id: "audiobookPanel",
+    name: "TTS with Character Voices",
+    content: [
+      {
+        type: "container",
+        style: { padding: "10px" },
+        content: [
+          {
+            type: "button",
+            text: showSettings ? "▼ Hide Settings" : "▶ Show Settings",
+            callback: async () => {
+              showSettings = !showSettings;
+              await updatePanel();
+            },
+            style: { marginBottom: "10px", width: "100%" }
+          },
+          ...voiceConfigs,
+          {
+            type: "row",
+            spacing: "start",
+            content: [
+              {
+                type: "button",
+                text: "Read Recent",
+                callback: readRecent,
+                style: { marginRight: "10px" }
+              },
+              {
+                type: "button",
+                text: "Read All",
+                callback: readAll,
+                style: { marginRight: "10px" }
+              },
+              {
+                type: "checkboxInput",
+                label: "Read Generated Text",
+                id: "autoReadCheckbox",
+                storageKey: "story:auto_read_enabled",
+              }
+            ],
+          }
+        ]
+      }
+    ]
+  }]);
+}
+
+// ===== HOOKS =====
+
+const onResponse: OnResponse = (data) => {
+  (async () => {
+    const autoReadEnabled = await getStoryStorage("auto_read_enabled");
+    
+    if (!autoReadEnabled) return;
+    
+    if (!data.final && data.text && data.text[0]) {
+      accumulatedText += data.text[0];
+    }
+    
+    if (data.final) {
+      const generatedText = accumulatedText;
+      accumulatedText = "";
+      
+      if (generatedText && generatedText.trim() !== "") {
+        api.v1.timers.setTimeout(async () => {
+          try {
+            await analyzeStory(generatedText, true);
+          } catch (e) {
+            api.v1.error("Error in auto-read:", e);
+          }
+        }, 500);
+      }
+    }
+  })();
+  
+  return {};
+};
+
+// ===== INITIALIZATION =====
+
+(async () => {
+  try {
+    const storyId = await getStoryId();
+    
+    if (!storyId) {
+      api.v1.log("TTS with Character Voices script loaded (not on a story page)");
+      return;
+    }
+    
+    const maleNarratorVoice = await getStoryStorage("voice_male_narrator");
+    if (!maleNarratorVoice) {
+      await setStoryStorage("voice_male_narrator", "Raid");
+    }
+    
+    const femaleNarratorVoice = await getStoryStorage("voice_female_narrator");
+    if (!femaleNarratorVoice) {
+      await setStoryStorage("voice_female_narrator", "Aini");
+    }
+    
+    // Register hook
+    api.v1.hooks.register('onResponse', onResponse);
+    
+    await api.v1.ui.register([
+      {
+        type: "contextMenuButton",
+        id: "readSegmentButton",
+        text: "Read Segment",
+        callback: (data) => readSegment(data.selection)
+      }
+    ]);
+    
+    await updatePanel();
+    
+    api.v1.log("TTS with Character Voices script initialized!");
+  } catch (e) {
+    api.v1.error("TTS script initialization error:", e);
+  }
+})();
