@@ -6,18 +6,18 @@ This repository contains a collection of scripting examples for use with NovelAI
 
 - `Scripting Demo_Crystal Dragon Encounter.scenario`: A scenario containing an example script demonstrating various scripting features. The demos cover most aspects of scripting and include editable examples.
 
-- `Bookmarks_v1.0.1.naiscript`: A script that lets you create "bookmarks" in a story. They let you save the current location in the story history and jump back to it later.
+- `Bookmarks.naiscript`: A script that lets you create "bookmarks" in a story. They let you save the current location in the story history and jump back to it later.
 
-- `Editor Probabilities Everywhere_v1.0.4.naiscript`: A script that adds a right click option to generate next token probabilities based on the cursor position in the editor.
+- `Editor Probabilities Everywhere.naiscript`: A script that adds a right click option to generate next token probabilities based on the cursor position in the editor.
 
-- `Find & Replace_v1.2.0.naiscript`: A script that allows you to find and replace text in the editor.
+- `Find & Replace.naiscript`: A script that allows you to find and replace text in the editor.
 
-- `Joke Generator_v1.2.3.naiscript`: A script that just generates a joke. A basic example of how to use the API to generate text.
+- `Joke Generator.naiscript`: A script that just generates a joke. A basic example of how to use the API to generate text.
 
-- `Notes_v1.1.1.naiscript`: A script that adds a notes panel below the editor. These notes open as editable windows that can be used to jot down ideas.
+- `Notes.naiscript`: A script that adds a notes panel below the editor. These notes open as editable windows that can be used to jot down ideas.
 
-- `Smart Summarizer_v0.8.0.naiscript`: Adds a right click option to summarize selected text in the editor.
+- `Smart Summarizer.naiscript`: Adds a right click option to summarize selected text in the editor.
 
-- `Thought Generator_v1.0.0.naiscript`: A script that generates character thoughts based on the story context. A character profile can be set to influence the generated thoughts.
+- `Thought Generator.naiscript`: A script that generates character thoughts based on the story context. A character profile can be set to influence the generated thoughts.
 
-- `Retry Harder_v1.3.0.naiscript`: A script that provides an alternative retry button with special prompting.
+- `Retry Harder.naiscript`: A script that provides an alternative retry button with special prompting.
