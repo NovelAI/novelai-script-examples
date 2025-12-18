@@ -1,0 +1,491 @@
+/*---
+compatibilityVersion: naiscript-1.0
+id: 88cc365a-84de-48b3-ae6f-56ecfc6196a3
+name: Bookmarks
+createdAt: 1762287499125
+updatedAt: 1766043425213
+version: 1.0.1
+author: Sonnet 4.5 ft. finetune
+description: This script lets you bookmark spots in the history of your story, so you can easily jump there.
+memoryLimit: 8
+---*/
+// Bookmarks Sidebar Script
+// Adds a sidebar panel for creating and managing story bookmarks
+
+const STORAGE_KEY = "bookmarks_data";
+
+type Bookmark = {
+  id: string;
+  nodeId: number;
+  title: string | null;
+  text: string;
+  createdAt: string;
+  modifiedAt: string;
+  favorite: boolean;
+};
+
+// Load bookmarks from story storage
+async function loadBookmarks(): Promise<Bookmark[]> {
+  const data = await api.v1.storyStorage.get(STORAGE_KEY);
+  return data || [];
+}
+
+// Save bookmarks to story storage
+async function saveBookmarks(bookmarks: Bookmark[]) {
+  await api.v1.storyStorage.set(STORAGE_KEY, bookmarks);
+}
+
+// Get the last sentence from the story (including incomplete sentences)
+async function getLastSentence() {
+  const sections = await api.v1.document.scan();
+  
+  if (sections.length === 0) {
+    return "Empty story";
+  }
+  
+  // Combine all text
+  let fullText = sections.map(s => s.section.text).join(" ");
+  
+  if (!fullText.trim()) {
+    return "Empty story";
+  }
+  
+  // Sentence end markers (Latin and CJK)
+  const sentenceEndRegex = /[.!?。！？]/g;
+  
+  // Find all sentence end positions
+  const matches = [...fullText.matchAll(sentenceEndRegex)];
+  
+  if (matches.length === 0) {
+    // No sentence end found, return entire text
+    return fullText.trim();
+  }
+  
+  // Try to get text after the last sentence marker (incomplete sentence)
+  const lastMarkerIndex = matches[matches.length - 1].index;
+  const textAfterLastMarker = fullText.slice(lastMarkerIndex + 1).trim();
+  
+  if (textAfterLastMarker) {
+    // There's an incomplete sentence after the last marker
+    return textAfterLastMarker;
+  }
+  
+  // Text ends with a sentence marker, get the complete sentence
+  if (matches.length === 1) {
+    // Only one sentence, return it
+    return fullText.slice(0, lastMarkerIndex + 1).trim();
+  }
+  
+  // Get the sentence between second-to-last and last marker
+  const secondLastMarkerIndex = matches[matches.length - 2].index;
+  return fullText.slice(secondLastMarkerIndex + 1, lastMarkerIndex + 1).trim();
+}
+
+// Sort bookmarks: favorites first (by modifiedAt desc), then regular (by modifiedAt desc)
+function sortBookmarks(bookmarks: Bookmark[]) {
+  return [...bookmarks].sort((a, b) => {
+    // Favorites first
+    if (a.favorite && !b.favorite) return -1;
+    if (!a.favorite && b.favorite) return 1;
+    
+    // Within same favorite status, sort by modifiedAt descending
+    return new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime();
+  });
+}
+
+// Build path from root to a given node
+async function getPathFromRoot(nodeId: number) {
+  const path = [];
+  let currentId = nodeId;
+  
+  // Walk backwards to root
+  while (currentId !== undefined) {
+    path.unshift(currentId); // Add to beginning
+    
+    // Try to get parent - we'll use previousNodeId but need to navigate there first
+    // Actually, we can't easily walk the tree without changing position
+    // Let's use a different approach
+    break; // This approach won't work without more API support
+  }
+  
+  return path;
+}
+
+// Jump to a specific history node
+async function jumpToBookmark(nodeId: number) {
+  try {
+    const success = await api.v1.document.history.jump(nodeId);
+    if (!success) {
+      api.v1.error("Failed to jump to bookmark - node may no longer exist");
+    }
+  } catch (error) {
+    api.v1.error("Failed to jump to bookmark:", error);
+  }
+}
+
+// Create bookmark window
+async function openCreateBookmarkWindow(text: string, nodeId: number) {
+  let title = "";
+  let favorite = false;
+  
+  const modal = await api.v1.ui.modal.open({
+    title: "Add Bookmark",
+    size: "medium",
+    content: [
+      {
+        type: "textInput",
+        id: "bookmark-title",
+        label: "Bookmark Title (optional)",
+        placeholder: "Enter a title...",
+        onChange: (value) => {
+          title = value;
+        }
+      },
+      {
+        type: "text",
+        text: "**Story Text:**",
+        markdown: true,
+        style: { marginBottom: "8px", marginTop: "16px" }
+      },
+      {
+        type: "text",
+        text: text,
+        style: { 
+          marginBottom: "16px",
+          padding: "8px",
+          border: "1px solid",
+          borderRadius: "4px",
+          fontStyle: "italic"
+        }
+      },
+      {
+        type: "checkboxInput",
+        id: "bookmark-favorite",
+        label: "Favorite",
+        initialValue: false,
+        onChange: (value) => {
+          favorite = value;
+        }
+      },
+      {
+        type: "row",
+        spacing: "end",
+        style: { marginTop: "16px", gap: "8px" },
+        content: [
+          {
+            type: "button",
+            text: "Cancel",
+            callback: () => {
+              modal.close();
+            }
+          },
+          {
+            type: "button",
+            text: "Create",
+            callback: async () => {
+              const now = new Date().toISOString();
+              const bookmark = {
+                id: api.v1.uuid(),
+                nodeId,
+                title: title.trim() || null,
+                text,
+                createdAt: now,
+                modifiedAt: now,
+                favorite
+              };
+              
+              const bookmarks = await loadBookmarks();
+              bookmarks.push(bookmark);
+              await saveBookmarks(bookmarks);
+              await renderBookmarkList();
+              modal.close();
+            }
+          }
+        ]
+      }
+    ]
+  });
+}
+
+// Edit bookmark window
+async function openEditBookmarkWindow(bookmark: Bookmark) {
+  let newTitle = bookmark.title || "";
+  
+  const modal = await api.v1.ui.modal.open({
+    title: "Edit Bookmark",
+    size: "medium",
+    content: [
+      {
+        type: "textInput",
+        id: "bookmark-title-edit",
+        label: "Bookmark Title",
+        placeholder: "Enter a title...",
+        initialValue: bookmark.title || "",
+        onChange: (value) => {
+          newTitle = value;
+        }
+      },
+      {
+        type: "text",
+        text: "**Story Text:**",
+        markdown: true,
+        style: { marginBottom: "8px", marginTop: "16px" }
+      },
+      {
+        type: "text",
+        text: bookmark.text,
+        style: { 
+          marginBottom: "16px",
+          padding: "8px",
+          border: "1px solid",
+          borderRadius: "4px",
+          fontStyle: "italic"
+        }
+      },
+      {
+        type: "row",
+        spacing: "end",
+        style: { marginTop: "16px", gap: "8px" },
+        content: [
+          {
+            type: "button",
+            text: "Cancel",
+            callback: () => {
+              modal.close();
+            }
+          },
+          {
+            type: "button",
+            text: "Save",
+            callback: async () => {
+              const bookmarks = await loadBookmarks();
+              const index = bookmarks.findIndex(b => b.id === bookmark.id);
+              if (index !== -1) {
+                bookmarks[index].title = newTitle.trim() || null;
+                bookmarks[index].modifiedAt = new Date().toISOString();
+                await saveBookmarks(bookmarks);
+                await renderBookmarkList();
+              }
+              modal.close();
+            }
+          }
+        ]
+      }
+    ]
+  });
+}
+
+// Delete confirmation window
+async function openDeleteConfirmation(bookmark: Bookmark) {
+  const modal = await api.v1.ui.modal.open({
+    title: "Delete Bookmark",
+    size: "small",
+    content: [
+      {
+        type: "text",
+        text: "Are you sure you want to delete this bookmark?",
+        style: { marginBottom: "16px" }
+      },
+      {
+        type: "text",
+        text: bookmark.title || bookmark.text,
+        style: { 
+          marginBottom: "16px",
+          padding: "8px",
+          border: "1px solid",
+          borderRadius: "4px",
+          fontWeight: bookmark.title ? "bold" : "normal",
+          fontStyle: bookmark.title ? "normal" : "italic"
+        }
+      },
+      {
+        type: "row",
+        spacing: "end",
+        style: { gap: "8px" },
+        content: [
+          {
+            type: "button",
+            text: "Cancel",
+            callback: () => {
+              modal.close();
+            }
+          },
+          {
+            type: "button",
+            text: "Delete",
+            callback: async () => {
+              const bookmarks = await loadBookmarks();
+              const filtered = bookmarks.filter(b => b.id !== bookmark.id);
+              await saveBookmarks(filtered);
+              await renderBookmarkList();
+              modal.close();
+            }
+          }
+        ]
+      }
+    ]
+  });
+}
+
+// Toggle favorite status
+async function toggleFavorite(bookmarkId: string) {
+  const bookmarks = await loadBookmarks();
+  const index = bookmarks.findIndex(b => b.id === bookmarkId);
+  if (index !== -1) {
+    bookmarks[index].favorite = !bookmarks[index].favorite;
+    bookmarks[index].modifiedAt = new Date().toISOString();
+    await saveBookmarks(bookmarks);
+    await renderBookmarkList();
+  }
+}
+
+// Create a single bookmark item UI
+function createBookmarkItem(bookmark: Bookmark): UIPart {
+  // Build button text - title on one line, story text on next
+  let buttonText = "";
+  if (bookmark.title) {
+    buttonText = bookmark.title + "\n" + bookmark.text;
+  } else {
+    buttonText = bookmark.text;
+  }
+  
+  return {
+    type: "box",
+    style: {
+      padding: "8px",
+      marginBottom: "8px",
+      border: "1px solid",
+      borderRadius: "4px"
+    },
+    content: [
+      {
+        type: "row",
+        spacing: "space-between",
+        alignment: "start",
+        content: [
+          // Left side: clickable bookmark content
+          {
+            type: "button",
+            text: buttonText,
+            callback: () => jumpToBookmark(bookmark.nodeId),
+            style: { 
+              flex: 1,
+              textAlign: "left",
+              padding: "8px",
+              border: "none",
+              backgroundColor: "transparent",
+              whiteSpace: "pre-wrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: bookmark.title ? "3" : "2",
+              WebkitBoxOrient: "vertical"
+            }
+          },
+          // Right side: action buttons in a row
+          {
+            type: "row",
+            style: { 
+              gap: "4px", 
+              marginLeft: "8px"
+            },
+            content: [
+              {
+                type: "button",
+                text: " ",
+                iconId: "heart",
+                callback: () => toggleFavorite(bookmark.id),
+                style: { 
+                  minWidth: "36px",
+                  opacity: bookmark.favorite ? 1 : 0.4
+                }
+              },
+              {
+                type: "button",
+                text: " ",
+                iconId: "edit",
+                callback: () => openEditBookmarkWindow(bookmark),
+                style: { 
+                  minWidth: "36px"
+                }
+              },
+              {
+                type: "button",
+                text: " ",
+                iconId: "trash",
+                callback: () => openDeleteConfirmation(bookmark),
+                style: { 
+                  minWidth: "36px"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  };
+}
+
+// Render the bookmark list
+async function renderBookmarkList() {
+  const bookmarks = await loadBookmarks();
+  const sorted = sortBookmarks(bookmarks);
+  
+  const bookmarkItems = sorted.map(bookmark => createBookmarkItem(bookmark));
+  
+  await api.v1.ui.register([
+    {
+      type: "sidebarPanel",
+      id: "bookmarks-panel",
+      name: "Bookmarks",
+      iconId: "file-text",
+      content: [
+        {
+          type: "container",
+          style: {
+            padding: "12px",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column"
+          },
+          content: [
+            {
+              type: "button",
+              iconId: "plus",
+              text: "Add Bookmark",
+              callback: async () => {
+                const nodeId = await api.v1.document.history.currentNodeId();
+                const text = await getLastSentence();
+                openCreateBookmarkWindow(text, nodeId);
+              },
+              style: { width: "100%", marginBottom: "16px" }
+            },
+            {
+              type: "container",
+              style: { 
+                flex: 1,
+                overflowY: "auto"
+              },
+              content: bookmarkItems.length > 0 ? bookmarkItems : [{
+                type: "text",
+                text: "No bookmarks yet. Click 'Add Bookmark' to create one.",
+                style: { 
+                  textAlign: "center",
+                  fontStyle: "italic",
+                  marginTop: "20px",
+                  opacity: "0.6"
+                }
+              }]
+            }
+          ]
+        }
+      ]
+    }
+  ]);
+}
+
+// Initialize
+(async () => {
+  await renderBookmarkList();
+  api.v1.log("Bookmarks panel initialized successfully!");
+})();

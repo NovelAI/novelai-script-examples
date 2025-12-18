@@ -1,0 +1,482 @@
+{
+  "scenarioVersion": 3,
+  "title": "Scripting Demo: Crystal Dragon Encounter",
+  "description": "This scenario contains a demo script for the scripting API. Make sure you enable it on the next screen.",
+  "prompt": "The splendor before my eyes left me breathless, a vaulted ceiling painted with scenes from an ancient tale; tapestries that stretched across three walls depicting tales of heroes long dead.\nHowever, as fate would have it, I was thoroughly distracted by the flurry of magic explosions obliterating my vision every time a magic spell hit its target: the dragon. After all, I was a mere human in the company of two magical beings, my companion Galena, a witch, and a fearsome crystal dragon. My presence here was not only an honor but also a grave danger.\n\"You know what to do, right?!\" Galena shouted at me as she threw another fireball at the dragon's head.\nI had been tasked with assisting Galena on this quest to save the world from the evil of a dragon. But how could I possibly help? ",
+  "tags": [],
+  "context": [
+    {
+      "text": "",
+      "contextConfig": {
+        "prefix": "",
+        "suffix": "\n",
+        "tokenBudget": 1,
+        "reservedTokens": 0,
+        "budgetPriority": 800,
+        "trimDirection": "trimBottom",
+        "insertionType": "newline",
+        "maximumTrimType": "sentence",
+        "insertionPosition": 0
+      }
+    },
+    {
+      "text": "",
+      "contextConfig": {
+        "prefix": "",
+        "suffix": "\n",
+        "tokenBudget": 1,
+        "reservedTokens": 1,
+        "budgetPriority": -400,
+        "trimDirection": "trimBottom",
+        "insertionType": "newline",
+        "maximumTrimType": "sentence",
+        "insertionPosition": -4
+      }
+    }
+  ],
+  "ephemeralContext": [],
+  "placeholders": [],
+  "settings": {
+    "parameters": {
+      "textGenerationSettingsVersion": 8,
+      "temperature": 1,
+      "max_length": 256,
+      "min_length": 1,
+      "top_k": 40,
+      "top_p": 0.95,
+      "top_a": 1,
+      "typical_p": 1,
+      "tail_free_sampling": 1,
+      "repetition_penalty": 0,
+      "repetition_penalty_range": 0,
+      "repetition_penalty_slope": 0,
+      "repetition_penalty_frequency": 0,
+      "repetition_penalty_presence": 0,
+      "repetition_penalty_default_whitelist": false,
+      "cfg_scale": 1,
+      "cfg_uc": "",
+      "phrase_rep_pen": "medium",
+      "top_g": 0,
+      "mirostat_tau": 0,
+      "mirostat_lr": 1,
+      "math1_temp": 0,
+      "math1_quad": 0,
+      "math1_quad_entropy_scale": 0,
+      "min_p": 0,
+      "order": [
+        {
+          "id": "temperature",
+          "enabled": true
+        },
+        {
+          "id": "top_k",
+          "enabled": true
+        },
+        {
+          "id": "top_p",
+          "enabled": true
+        },
+        {
+          "id": "min_p",
+          "enabled": false
+        }
+      ]
+    },
+    "preset": "default-glm",
+    "trimResponses": true,
+    "banBrackets": true,
+    "prefix": "vanilla",
+    "dynamicPenaltyRange": false,
+    "prefixMode": 0,
+    "mode": 0,
+    "model": "glm-4-6"
+  },
+  "lorebook": {
+    "lorebookVersion": 6,
+    "entries": [
+      {
+        "text": "Galena, the witch of the tower. Galena's eyes are obscured by a translucent ribbon that drapes across her face like a veil and is braided into her long, luscious hair. The religious sect of Simja used to keep Galena confined to the tower for her whole life until her marriage to the king. Once free, Galena discovered her magical powers she employs to protect the kingdom from all types of magical enemies.",
+        "contextConfig": {
+          "prefix": "",
+          "suffix": "\n",
+          "tokenBudget": 1,
+          "reservedTokens": 0,
+          "budgetPriority": 400,
+          "trimDirection": "trimBottom",
+          "insertionType": "newline",
+          "maximumTrimType": "sentence",
+          "insertionPosition": -1
+        },
+        "lastUpdatedAt": 1638423588371,
+        "displayName": "Galena the witch of the tower",
+        "id": "74180e75-5c1d-415c-9b35-8dd7cb7428f3",
+        "keys": [
+          "Galena",
+          "witch",
+          "ribbon",
+          "tower"
+        ],
+        "searchRange": 1000,
+        "enabled": true,
+        "forceActivation": false,
+        "keyRelative": false,
+        "nonStoryActivatable": false,
+        "category": "4be2c28c-a715-47e0-abf5-830172b67ede",
+        "loreBiasGroups": [
+          {
+            "phrases": [
+              {
+                "sequences": [],
+                "sequence": "witch",
+                "type": 2
+              },
+              {
+                "sequences": [],
+                "sequence": "ribbon",
+                "type": 2
+              },
+              {
+                "sequences": [],
+                "sequence": "veil",
+                "type": 2
+              }
+            ],
+            "ensure_sequence_finish": false,
+            "ensureSequenceFinish": false,
+            "generate_once": true,
+            "generateOnce": true,
+            "bias": 0.07,
+            "enabled": true,
+            "whenInactive": false
+          }
+        ],
+        "advancedConditions": []
+      },
+      {
+        "text": "The religion of Simja is a mighty entity with a firm hold over their own military. Strange history led to a custom of raising witches in the mighty tower structure of a sprawling religious stronghold, Simja. The witch of the tower is forbidden to ever leave the stronghold and forbidden all outside contact until their weddings to whichever king can convince them to provide fortitude and advancements to their creed. The women raised within the stronghold of Simja are infused with magical powers. ",
+        "contextConfig": {
+          "prefix": "",
+          "suffix": "\n",
+          "tokenBudget": 1,
+          "reservedTokens": 0,
+          "budgetPriority": 400,
+          "trimDirection": "trimBottom",
+          "insertionType": "newline",
+          "maximumTrimType": "sentence",
+          "insertionPosition": -1
+        },
+        "lastUpdatedAt": 1633478891368,
+        "displayName": "Simja",
+        "id": "2cca700d-9599-48d3-81e0-dd800bf2e834",
+        "keys": [
+          "Simja",
+          "religion",
+          "creed",
+          "magic",
+          "tower"
+        ],
+        "searchRange": 1000,
+        "enabled": true,
+        "forceActivation": false,
+        "keyRelative": false,
+        "nonStoryActivatable": false,
+        "category": "",
+        "loreBiasGroups": [
+          {
+            "phrases": [],
+            "ensure_sequence_finish": false,
+            "ensureSequenceFinish": false,
+            "generate_once": true,
+            "generateOnce": true,
+            "bias": 0,
+            "enabled": true,
+            "whenInactive": false
+          }
+        ],
+        "advancedConditions": []
+      },
+      {
+        "text": "Crystal dragons were created from the corpses of defeated wyverns when ancient kingdoms fell under demonic influence during the Great War. These beasts possess incredible strength coupled with magical powers. Their scales are covered in crystal shards that give them both physical protection and mystical properties. They are magnificent in their appearance.",
+        "contextConfig": {
+          "prefix": "",
+          "suffix": "\n",
+          "tokenBudget": 1,
+          "reservedTokens": 0,
+          "budgetPriority": 400,
+          "trimDirection": "trimBottom",
+          "insertionType": "newline",
+          "maximumTrimType": "sentence",
+          "insertionPosition": -1
+        },
+        "lastUpdatedAt": 1638423622779,
+        "displayName": "Crystal Dragon",
+        "id": "9232c7f8-d128-4c1e-b201-29ecc825afd7",
+        "keys": [
+          "crystal",
+          "sparkle",
+          "dragon",
+          "wyvern",
+          "beast"
+        ],
+        "searchRange": 1000,
+        "enabled": true,
+        "forceActivation": false,
+        "keyRelative": false,
+        "nonStoryActivatable": false,
+        "category": "4be2c28c-a715-47e0-abf5-830172b67ede",
+        "loreBiasGroups": [
+          {
+            "phrases": [
+              {
+                "sequences": [],
+                "sequence": "dragon",
+                "type": 2
+              }
+            ],
+            "ensure_sequence_finish": false,
+            "ensureSequenceFinish": false,
+            "generate_once": true,
+            "generateOnce": true,
+            "bias": 0.07,
+            "enabled": true,
+            "whenInactive": false
+          }
+        ],
+        "advancedConditions": []
+      }
+    ],
+    "settings": {
+      "orderByKeyLocations": false
+    },
+    "categories": [
+      {
+        "name": "Characters",
+        "id": "4be2c28c-a715-47e0-abf5-830172b67ede",
+        "enabled": true,
+        "createSubcontext": false,
+        "subcontextSettings": {
+          "text": "",
+          "contextConfig": {
+            "prefix": "",
+            "suffix": "\n",
+            "tokenBudget": 1,
+            "reservedTokens": 0,
+            "budgetPriority": 400,
+            "trimDirection": "trimBottom",
+            "insertionType": "newline",
+            "maximumTrimType": "sentence",
+            "insertionPosition": -1
+          },
+          "lastUpdatedAt": 1633483574108,
+          "displayName": "New Lorebook Entry",
+          "id": "5a862bc7-f541-4812-bec6-e8ecc8ff6425",
+          "keys": [],
+          "searchRange": 1000,
+          "enabled": true,
+          "forceActivation": false,
+          "keyRelative": false,
+          "nonStoryActivatable": false,
+          "category": "",
+          "loreBiasGroups": [
+            {
+              "phrases": [],
+              "ensure_sequence_finish": false,
+              "ensureSequenceFinish": false,
+              "generate_once": true,
+              "generateOnce": true,
+              "bias": 0,
+              "enabled": true,
+              "whenInactive": false
+            }
+          ],
+          "advancedConditions": []
+        },
+        "useCategoryDefaults": true,
+        "categoryDefaults": {
+          "text": "",
+          "contextConfig": {
+            "prefix": "",
+            "suffix": "\n",
+            "tokenBudget": 1,
+            "reservedTokens": 0,
+            "budgetPriority": 400,
+            "trimDirection": "trimBottom",
+            "insertionType": "newline",
+            "maximumTrimType": "sentence",
+            "insertionPosition": -1
+          },
+          "lastUpdatedAt": 1633478644543,
+          "displayName": "New Lorebook Entry",
+          "id": "3aefc0bd-f98d-48da-81ea-4c2cd48db082",
+          "keys": [],
+          "searchRange": 1000,
+          "enabled": true,
+          "forceActivation": false,
+          "keyRelative": false,
+          "nonStoryActivatable": false,
+          "category": "",
+          "loreBiasGroups": [
+            {
+              "phrases": [],
+              "ensure_sequence_finish": false,
+              "ensureSequenceFinish": false,
+              "generate_once": true,
+              "generateOnce": true,
+              "bias": 0,
+              "enabled": true,
+              "whenInactive": false
+            }
+          ],
+          "advancedConditions": []
+        },
+        "categoryBiasGroups": [
+          {
+            "phrases": [],
+            "ensure_sequence_finish": false,
+            "ensureSequenceFinish": false,
+            "generate_once": true,
+            "generateOnce": true,
+            "bias": 0,
+            "enabled": true,
+            "whenInactive": false
+          }
+        ],
+        "settings": {},
+        "order": [],
+        "open": true
+      }
+    ],
+    "order": []
+  },
+  "author": "",
+  "storyContextConfig": {
+    "prefix": "",
+    "suffix": "",
+    "tokenBudget": 1,
+    "reservedTokens": 512,
+    "budgetPriority": 0,
+    "trimDirection": "trimTop",
+    "insertionType": "newline",
+    "maximumTrimType": "sentence",
+    "insertionPosition": -1,
+    "allowInsertionInside": true
+  },
+  "contextDefaults": {
+    "ephemeralDefaults": [
+      {
+        "text": "",
+        "contextConfig": {
+          "prefix": "",
+          "suffix": "\n",
+          "tokenBudget": 1,
+          "reservedTokens": 1,
+          "budgetPriority": -10000,
+          "trimDirection": "doNotTrim",
+          "insertionType": "newline",
+          "maximumTrimType": "newline",
+          "insertionPosition": -2
+        },
+        "startingStep": 1,
+        "delay": 0,
+        "duration": 1,
+        "repeat": false,
+        "reverse": false
+      }
+    ],
+    "loreDefaults": [
+      {
+        "text": "",
+        "contextConfig": {
+          "prefix": "",
+          "suffix": "\n",
+          "tokenBudget": 1,
+          "reservedTokens": 0,
+          "budgetPriority": 400,
+          "trimDirection": "trimBottom",
+          "insertionType": "newline",
+          "maximumTrimType": "sentence",
+          "insertionPosition": -1
+        },
+        "lastUpdatedAt": 1764509822251,
+        "displayName": "New Lorebook Entry",
+        "id": "3855710e-d90f-419f-a794-0ae1e75245ed",
+        "keys": [],
+        "searchRange": 1000,
+        "enabled": true,
+        "forceActivation": false,
+        "keyRelative": false,
+        "nonStoryActivatable": false,
+        "category": "",
+        "loreBiasGroups": [
+          {
+            "phrases": [],
+            "ensureSequenceFinish": false,
+            "generateOnce": true,
+            "bias": 0,
+            "enabled": true,
+            "whenInactive": false
+          }
+        ],
+        "advancedConditions": []
+      }
+    ]
+  },
+  "phraseBiasGroups": [
+    {
+      "phrases": [],
+      "ensureSequenceFinish": false,
+      "generateOnce": true,
+      "bias": 0,
+      "enabled": true,
+      "whenInactive": false
+    }
+  ],
+  "bannedSequenceGroups": [
+    {
+      "sequences": [],
+      "enabled": true
+    }
+  ],
+  "messageSettings": {},
+  "userScripts": [
+    {
+      "compatibilityVersion": "naiscript-1.0",
+      "exportVersion": "unknwon",
+      "code": "api.v1.log(\"Feature Test Script loaded!\");\n\n// ============================================================================\n// Interactive Code Runner\n// ============================================================================\n\nconst HR = {\n  type: \"container\",\n  style: {\n    width: \"100%\",\n    border: \"1px solid transparent\",\n    borderColor: \"bg3\",\n    margin: \"20px 0px\",\n  },\n  content: [],\n} as UIPart;\n\nasync function runCode(code: string): Promise<any> {\n  const asyncFn = new Function(\"api\", `return (async () => { ${code} })();`);\n  return await asyncFn(api);\n}\n\nfunction formatValue(value: any, depth = 0): string {\n  if (depth > 3) return \"...\";\n  if (value === undefined) return \"undefined\";\n  if (value === null) return \"null\";\n  if (typeof value === \"string\") return depth === 0 ? value : `\"${value}\"`;\n  if (typeof value === \"number\" || typeof value === \"boolean\")\n    return String(value);\n  if (typeof value === \"function\") return \"[Function]\";\n  if (Array.isArray(value)) {\n    if (value.length === 0) return \"[]\";\n    if (value.length > 5) return `[Array(${value.length})]`;\n    return `[${value.map((v) => formatValue(v, depth + 1)).join(\", \")}]`;\n  }\n  if (typeof value === \"object\") {\n    const keys = Object.keys(value);\n    if (keys.length === 0) return \"{}\";\n    if (keys.length > 10) return `{Object(${keys.length} keys)}`;\n    return `{ ${keys\n      .slice(0, 10)\n      .map((k) => `${k}: ${formatValue(value[k], depth + 1)}`)\n      .join(\", \")} }`;\n  }\n  return String(value);\n}\n\nfunction codeExample(\n  id: string,\n  title: string,\n  description: string,\n  defaultCode: string,\n  resultKey: string,\n  height?: number,\n): UIPart[] {\n  api.v1.storage.get(`code-${id}`).then((v) => {\n    if (v === undefined) api.v1.storage.set(`code-${id}`, defaultCode);\n  });\n  api.v1.storage.set(resultKey, \"\");\n  return [\n    {\n      type: \"text\",\n      markdown: true,\n      text: `**${title}**`,\n      style: { marginTop: \"20px\" },\n    },\n    { type: \"text\", markdown: true, text: description },\n    {\n      type: \"codeEditor\",\n      id: `input-${id}`,\n      storageKey: `code-${id}`,\n      height: height ?? 100,\n      diagnosticCodesToIgnore: [1108, 1375],\n    },\n    {\n      type: \"row\",\n      spacing: \"start\",\n      alignment: \"start\",\n      content: [\n        {\n          type: \"button\",\n          text: \"▶ Run\",\n          disabledWhileCallbackRunning: true,\n          style: { minHeight: 45 },\n          callback: async () => {\n            const code = await api.v1.storage.get(`code-${id}`);\n            const jsCode = api.v1.ts.transpile(code);\n            api.v1.storage.set(resultKey, \"Running...\");\n            try {\n              const result = await runCode(jsCode);\n              api.v1.storage.set(\n                resultKey,\n                `✓ ${result === undefined ? `(no return value)` : formatValue(result)}`,\n              );\n            } catch (e: any) {\n              api.v1.storage.set(resultKey, `✗ Error: ${e.message}`);\n            }\n          },\n        },\n        {\n          type: \"button\",\n          text: \"Reset\",\n          style: { minHeight: 45 },\n          callback: () => {\n            api.v1.storage.set(`code-${id}`, defaultCode);\n            api.v1.storage.set(resultKey, \"\");\n          },\n        },\n        {\n          type: \"box\",\n          style: {\n            flex: \"1 1 0\",\n            padding: \"3px 6px\",\n            background: \"bg1\",\n            fontFamily: \"monospace\",\n            fontSize: \"13px\",\n            minHeight: \"20px\",\n            whiteSpace: \"pre-wrap\",\n            wordBreak: \"break-word\",\n          },\n          content: [{ type: \"text\", text: ` {{${resultKey}}}` }],\n        },\n      ],\n    },\n  ];\n}\n\n// ============================================================================\n// Register Hooks\n// ============================================================================\n\napi.v1.hooks.register(\"onResponse\", async ({ text }) => {\n  if (text.length === 0) return;\n  const log =\n    ((await api.v1.storage.get(\"hook-response-log\")) || \"\") +\n    `[${new Date().toLocaleTimeString()}] ${text.join(\"\")}\\n`;\n  api.v1.storage.set(\"hook-response-log\", log.slice(-2000));\n});\n\napi.v1.hooks.register(\n  \"onGenerationRequested\",\n  async ({ model, scriptInitiated }) => {\n    api.v1.storage.set(\n      \"hook-gen-requested\",\n      `${model}, script: ${scriptInitiated}`,\n    );\n  },\n);\n\napi.v1.hooks.register(\"onGenerationEnd\", async ({ model }) => {\n  api.v1.storage.set(\n    \"hook-gen-end\",\n    `${model} @ ${new Date().toLocaleTimeString()}`,\n  );\n});\n\napi.v1.hooks.register(\"onHistoryNavigated\", async ({ cause, distance }) => {\n  api.v1.storage.set(\"hook-history\", `${cause} (${distance} steps)`);\n});\n\napi.v1.hooks.register(\"onScriptsLoaded\", () => {\n  api.v1.storage.set(\"hook-scripts-loaded\", new Date().toLocaleTimeString());\n  api.v1.ui.openPanel(\"welcome-panel\");\n});\n\napi.v1.hooks.register(\n  \"onLorebookEntrySelected\",\n  async ({ entryId, categoryId }) => {\n    if (entryId) {\n      let entry = await api.v1.lorebook.entry(entryId);\n      api.v1.ui.update([\n        {\n          id: \"demo-lorebook\",\n          name: \"Script Tools\",\n          type: \"lorebookPanel\",\n          content: [\n            {\n              type: \"text\",\n              markdown: true,\n              text: '## Lorebook Panel\\n\\nThis panel appears in the Lorebook editor when you select an entry. Useful for Lorebook entry-specific tools and integrations. If your screen is wide enough you can even dock the \"Script\" tab to the side.',\n            },\n            {\n              type: \"text\",\n              markdown: true,\n              text: \"Combine with the `onLorebookEntrySelected` hook to react when users select different entries or categories. As an example, this panel updates to show the selected entry's name and text.\",\n            },\n            {\n              type: \"text\",\n              markdown: true,\n              text: `**Selected Entry:** ${entry?.displayName}`,\n            },\n            { type: \"text\", markdown: true, text: `**Text:** ${entry?.text}` },\n          ],\n        },\n      ]);\n    } else if (categoryId) {\n      let category = await api.v1.lorebook.category(categoryId);\n      let entries = await api.v1.lorebook.entries(categoryId);\n      api.v1.ui.update([\n        {\n          id: \"demo-lorebook\",\n          name: \"Script Tools\",\n          type: \"lorebookPanel\",\n          content: [\n            {\n              type: \"text\",\n              markdown: true,\n              text: '## Lorebook Panel\\n\\nThis panel appears in the Lorebook editor when you select an entry. Useful for Lorebook entry-specific tools and integrations. If your screen is wide enough you can even dock the \"Script\" tab to the side.',\n            },\n            {\n              type: \"text\",\n              markdown: true,\n              text: \"Combine with the `onLorebookEntrySelected` hook to react when users select different entries or categories. As an example, this panel updates to show the selected category's name and the number of entries it contains.\",\n            },\n            {\n              type: \"text\",\n              markdown: true,\n              text: `**Selected Category:** ${category?.name}`,\n            },\n            {\n              type: \"text\",\n              markdown: true,\n              text: `**Number of Entries:** ${entries.length}`,\n            },\n          ],\n        },\n      ]);\n    }\n  },\n);\n\n// Initialize storage for hook displays\napi.v1.storage.set(\"hook-response-log\", \"\");\napi.v1.storage.set(\"hook-gen-requested\", \"(generate to see)\");\napi.v1.storage.set(\"hook-gen-end\", \"(generate to see)\");\napi.v1.storage.set(\"hook-history\", \"(undo/redo to see)\");\n\n// ============================================================================\n// BASICS: API Modal\n// ============================================================================\n\nasync function openAPIModal() {\n  await api.v1.ui.modal.open({\n    title: \"The API Object\",\n    size: \"medium\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Throughout the story you'll find mini code editors like the one below. These are set up to show you editable and runnable example code. When run, the returned value will be shown in the box below them. They have access to the full scripting API.\",\n      },\n      ...codeExample(\n        \"api-object\",\n        \"The API Object\",\n        'Scripts access NovelAI functionality through the \"api\" global object. You\\'ll be seeing a lot of it.',\n        `return \\`This script is named \"\\${api.v1.script.name}\".\\`;`,\n        \"result-api-object\",\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// BASICS: Logging Modal\n// ============================================================================\n\nasync function openLoggingModal() {\n  await api.v1.ui.modal.open({\n    title: \"Logging\",\n    size: \"medium\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Scripts can output messages for debugging and information using `api.v1.log()` for normal messages and `api.v1.error()` for errors.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Log output appears in the browser console and in the script's log viewer (accessible from the script management modal). You can log strings, objects, or multiple values at once.\",\n      },\n      ...codeExample(\n        \"logging\",\n        \"Try it out\",\n        \"Edit the code below and click Run to see output in the console.\",\n        `api.v1.log(\"Hello!\", { nested: { value: 42 } });\nreturn \"Check the console (F12) or script logs!\"`,\n        \"result-logging\",\n      ),\n      ...codeExample(\n        \"error-logging\",\n        \"Logging Errors\",\n        \"This one will log it as an error message. It'll show up in a different color so it's easier to spot.\",\n        `api.v1.error(\"This appears as an error\");\nreturn \"Check the console (F12) or script logs!\"`,\n        \"result-error-logging\",\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// BASICS: Storage Modal\n// ============================================================================\n\nasync function openStorageModal() {\n  await api.v1.storage.set(\n    \"storage-linked\",\n    \"The text here matches the text there!\",\n  );\n  await api.v1.ui.modal.open({\n    title: \"Storage\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Scripts have access to several storage systems for persisting data:\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"- **`api.v1.storage`** — Persistent storage tied the script. That means to the account for account scripts, and to the story with a story script.\\n- **`api.v1.storyStorage`** — Persistent storage tied to the current story. This story will save to the current story even for account scripts.\\n- **`api.v1.historyStorage`** — Special storage that integrates with undo/redo. When you undo, values revert to their previous state.\\n- **`api.v1.tempStorage`** — Session-only storage that's cleared on script reload. Useful for temporary state in UI elements.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"All storage types share the same API: `get(key)`, `set(key, value)`, `remove(key)`, `list()`, and `has(key)`\",\n      },\n      ...codeExample(\n        \"storage\",\n        \"Persistent Storage\",\n        \"Values are automatically serialized and survive page reloads.\",\n        `await api.v1.storage.set(\"demo\", { saved: true, time: Date.now() });\nconst value = await api.v1.storage.get(\"demo\");\nreturn value;`,\n        \"result-storage\",\n      ),\n      {\n        type: \"text\",\n        noTemplate: true,\n        text: \"Storage can also be tied to inputs by setting a `storageKey` or displayed as text by surrounding them with `{{curly braces}}`\",\n      },\n      {\n        type: \"text\",\n        noTemplate: true,\n        text: \"The text input and text below are both linked to the same value in storage. Changing the input will update the text displayed.\",\n      },\n      { type: \"textInput\", storageKey: \"storage-linked\" },\n      { type: \"text\", text: \"Current Value: {{storage-linked}}\" },\n      {\n        type: \"text\",\n        noTemplate: true,\n        markdown: true,\n        style: { marginTop: \"20px\" },\n        text: \"Other types of storage can also be linked to values by prefixing the storage key with the type of storage: `{{story:storage-key}}`, `{{history:storage-key}},` or `{{temp:storage-key}}`\",\n      },\n    ],\n  });\n}\n\n// ============================================================================\n// BASICS: History Storage Modal\n// ============================================================================\n\nasync function openHistoryStorageModal() {\n  await api.v1.ui.modal.open({\n    title: \"Storage\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"api.v1.historyStorage special version of storage that keeps track of undoing and redoing done in the editor. When you save a value to history storage, you're saving it at that current generation. If you undo or redo, the value will revert to what it was at that generation.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The button below will increment a counter stored in history storage. Close this modal and generate a few times, then come back and increment the counter, undo, and redo to see it in action. Note that only the generations matter. If you undo or redo a document history node that wasn't caused by a generation, the value won't change. The undo and redo buttons here do the same thing as the editor's undo and redo buttons, so if you don't have any generation history nodes to undo or redo, they won't do anything.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        content: [\n          {\n            type: \"button\",\n            text: \"Increment Counter\",\n            callback: async () => {\n              api.v1.historyStorage.set(\n                \"history-storage-test-modal-counter\",\n                ((await api.v1.historyStorage.get(\n                  \"history-storage-test-modal-counter\",\n                )) || 0) + 1,\n              );\n            },\n          },\n          {\n            type: \"button\",\n            text: \"Clear Counter\",\n            callback: async () => {\n              api.v1.historyStorage.set(\n                \"history-storage-test-modal-counter\",\n                0,\n              );\n            },\n          },\n          {\n            type: \"button\",\n            text: \"Undo\",\n            callback: async () => {\n              api.v1.document.history.undo();\n              api.v1.log(\"Undid last action\");\n            },\n          },\n          {\n            type: \"button\",\n            text: \"Redo\",\n            callback: async () => {\n              api.v1.document.history.redo();\n              api.v1.log(\"Redid last undone action\");\n            },\n          },\n        ],\n      },\n      {\n        type: \"text\",\n        text: \"Current counter value: {{history:history-storage-test-modal-counter}}\",\n      },\n    ],\n  });\n}\n\n// ============================================================================\n// BASICS: Config & Script Info Modal\n// ============================================================================\n\nasync function openConfigModal() {\n  await api.v1.ui.modal.open({\n    title: \"Config & Script Info\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Scripts can define user-configurable settings in the User Scripts modal. Users can then modify these values in the script settings panel without needing to edit the code, or for the script maker to create their own settings menu.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"This script defines two config values: `exampleSetting` (a string) and `exampleNumber` (a number). Try changing them in the script settings, then run the code below to see the updated values.\",\n      },\n      ...codeExample(\n        \"config\",\n        \"Read Config Values\",\n        \"These come from the Config tab of the Scripts Modal.\",\n        `return {\n  setting: await api.v1.config.get(\"exampleSetting\"),\n  number: await api.v1.config.get(\"exampleNumber\")\n};`,\n        \"result-config\",\n      ),\n      HR,\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The `api.v1.script` object provides read-only access to the script's metadata, as defined in the scripts Info tab. This is useful checking the scripts version, memory limit, or when interacting with other scripts.\",\n      },\n      ...codeExample(\n        \"scriptinfo\",\n        \"Script Metadata\",\n        \"Static information about the running script.\",\n        `return {\n  id: api.v1.script.id,\n  name: api.v1.script.name,\n  version: api.v1.script.version,\n  author: api.v1.script.author,\n  memoryLimit: api.v1.script.memoryLimit + \" Bytes\"\n};`,\n        \"result-scriptinfo\",\n        150,\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// STORY: Memory, AN, Prompts Modal\n// ============================================================================\n\nasync function openMemoryModal() {\n  await api.v1.ui.modal.open({\n    title: \"Memory, AN & Prompts\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Scripts can read and modify the core story context elements that get sent to the AI during generation:\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"- **Memory** (`api.v1.memory`) — The story's memory field, always included at the start of context.\\n- **Author's Note** (`api.v1.an`) — Inserted near the end of context to guide the AI's output style.\\n- **System Prompt** (`api.v1.systemPrompt`) — The system-level instructions for the model.\\n- **Prefill** (`api.v1.prefill`) — Text that appears at the start of the AI's response.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"All four of them have `set` and `get` functions that can be used to read or change them.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Note:** Writing to these fields requires the `storyEdit` permission.\",\n      },\n      ...codeExample(\n        \"memory\",\n        \"Read Memory\",\n        \"\",\n        `let memory = await api.v1.memory.get()\\nreturn memory`,\n        \"result-memory\",\n      ),\n      HR,\n      ...codeExample(\n        \"memory-write\",\n        \"Modify Memory (requires permission)\",\n        \"This will append text to your story's memory.\",\n        `const granted = await api.v1.permissions.request(\"storyEdit\");\nif (!granted) return \"Permission denied\";\nconst current = await api.v1.memory.get() || \"\";\nawait api.v1.memory.set(current + \"\\\\n[Added by script at \" + new Date().toLocaleTimeString() + \"]\");\nreturn \"Memory updated!\";`,\n        \"result-memory-write\",\n        150,\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// STORY: Generation Parameters Modal\n// ============================================================================\n\nasync function openGenParamsModal() {\n  await api.v1.ui.modal.open({\n    title: \"Generation Parameters\",\n    size: \"medium\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The `api.v1.generationParameters` object lets you read (and with permission, modify) the current generation settings like temperature, top-p, repetition penalty, and more.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"These are the same settings you'd configure in the generation options panel. Scripts can read them to adapt their behavior, or modify them programmatically.\",\n      },\n      ...codeExample(\n        \"genparams\",\n        \"Read Current Settings\",\n        \"\",\n        `const params = await api.v1.generationParameters.get();\nreturn params;`,\n        \"result-genparams\",\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// STORY: Lorebook Modal\n// ============================================================================\n\nasync function openLorebookModal() {\n  await api.v1.ui.modal.open({\n    title: \"Lorebook\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The Lorebook API lets scripts read, create, update, and delete lorebook entries and categories. This enables dynamic world-building, automated entry creation, and integration with external data sources.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Editing requires the `lorebookEdit` permission.**\",\n      },\n      ...codeExample(\n        \"lorebook\",\n        \"List Categories & Entries\",\n        \"This will get all categories and entries that exist in the story.\",\n        `const categories = await api.v1.lorebook.categories();\nconst uncategorized = await api.v1.lorebook.entries();\nreturn { \n  categories: categories.map(c => c.name),\n  uncategorizedCount: uncategorized.length\n};`,\n        \"result-lorebook\",\n        150,\n      ),\n      HR,\n      ...codeExample(\n        \"lorebook-create\",\n        \"Create an Entry\",\n        \"Creates a new lorebook entry. Run multiple times to create more!\",\n        `const granted = await api.v1.permissions.request(\"lorebookEdit\");\nif (!granted) return \"Permission denied\";\n\nawait api.v1.lorebook.createEntry({\n  id: api.v1.uuid(),\n  displayName: \"Script Entry \" + api.v1.random.int(1, 100),\n  text: \"This entry was created by a script at \" + new Date().toLocaleTimeString(),\n  keys: [\"script\", \"test\"]\n});\nreturn \"Entry created! Check your lorebook.\";`,\n        \"result-lorebook-create\",\n        250,\n      ),\n    ],\n  });\n}\n// ============================================================================\n// DOCUMENT Window\n// ============================================================================\n\nfunction openDocumentWindow() {\n  api.v1.storage.set(\"doc-result\", \"\");\n  api.v1.ui.window.open({\n    id: \"document-window\",\n    title: \"Document API\",\n    defaultWidth: 520,\n    defaultHeight: 500,\n    resizable: true,\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The Document API provides programmatic access to the editor content. You can scan the document structure, read and modify paragraphs, and navigate history.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Modifications require the `documentEdit` permission.**\",\n      },\n      ...codeExample(\n        \"doc-scan\",\n        \"Scan Document\",\n        \"Returns an array of sections (paragraphs) with their IDs and content.\",\n        `const sections = await api.v1.document.scan();\nreturn sections.slice(0, 3).map(s => ({\n  id: s.sectionId,\n  text: s.section.text.slice(0, 40) + \"...\"\n}));`,\n        \"doc-result-scan\",\n        130,\n      ),\n      HR,\n      ...codeExample(\n        \"doc-append\",\n        \"Append Paragraph\",\n        \"Adds a new paragraph to the end of the document.\",\n        `if (!await api.v1.permissions.request(\"documentEdit\")) return;\nawait api.v1.document.appendParagraph({ text: \"This paragraph was added by a script!\" });\nreturn \"Paragraph added!\"`,\n        \"doc-result-append\",\n        130,\n      ),\n      ...codeExample(\n        \"doc-selection\",\n        \"Get Selection\",\n        \"Retrieve the current selected text.\",\n        `const sel = await api.v1.editor.selection.get();\nconst text = await api.v1.document.textFromSelection({ from: sel.from, to: sel.to });\nreturn text || \"(no selection — select some text first)\"`,\n        \"doc-result-selection\",\n        130,\n      ),\n      HR,\n      { type: \"text\", markdown: true, text: \"**History Navigation**\" },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Scripts can navigate and read information about history nodes.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        content: [\n          {\n            type: \"button\",\n            text: \"Undo\",\n            callback: () => api.v1.document.history.undo(),\n          },\n          {\n            type: \"button\",\n            text: \"Redo\",\n            callback: () => api.v1.document.history.redo(),\n          },\n          {\n            type: \"button\",\n            text: \"Current Node ID\",\n            callback: async () => {\n              api.v1.storage.set(\n                \"doc-result\",\n                await api.v1.document.history.currentNodeId(),\n              );\n            },\n          },\n          {\n            type: \"button\",\n            text: \"Last Gen Node\",\n            callback: async () => {\n              const id =\n                await api.v1.document.history.mostRecentGenerationNodeId();\n              api.v1.storage.set(\"doc-result\", id || \"(no generations yet)\");\n            },\n          },\n        ],\n      },\n      { type: \"box\", content: [{ type: \"text\", text: \"{{doc-result}} \" }] },\n    ],\n  });\n}\n\n// ============================================================================\n// GENERATION: Generate Modal\n// ============================================================================\n\nasync function openGenerateModal() {\n  await api.v1.ui.modal.open({\n    title: \"Text Generation\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The `api.v1.generate()` function lets scripts make their own generation requests to the AI, independent of the normal story generation flow. This is useful for side-tasks like summarization, generating structured data, or anything else you can imagine.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**⚠️ These examples make real API calls and will take time to complete.**\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The function takes a messages array (chat format), generation options, and an optional streaming callback.\",\n      },\n      ...codeExample(\n        \"generate\",\n        \"Basic Generation\",\n        \"Simple request/response pattern.\",\n        `const response = await api.v1.generate(\n  [{ role: \"user\", content: \"When five people queue in a single line, how many ways can they possibly be arranged? Answer in one sentence.\" }],\n  { model: \"glm-4-6\", max_tokens: 30 }\n);\nreturn response.choices[0].text;`,\n        \"result-generate\",\n        150,\n      ),\n      HR,\n      ...codeExample(\n        \"generate-stream\",\n        \"Streaming Response\",\n        \"The third argument is a callback that receives tokens as they arrive. This example will display the streamed value to the UI below.\",\n        `let chunks: string[] = [];\napi.v1.tempStorage.set(\"generate-stream-output\", \"\");\nawait api.v1.generate(\n  [{ role: \"user\", content: \"Explain the phrase \\\\\"Fools and scissors require good handling\\\\\" in one sentence.\" }],\n  { model: \"glm-4-6\", max_tokens: 50 },\n  (choices, isFinal) => { \n    chunks.push(choices[0]?.text || \"\");\n    api.v1.tempStorage.set(\"generate-stream-output\", chunks.join(\"\"))\n  }\n);\nreturn { totalChunks: chunks.length, fullText: chunks.join(\"\") };`,\n        \"result-generate-stream\",\n        240,\n      ),\n      {\n        type: \"box\",\n        content: [\n          {\n            type: \"text\",\n            text: \"Streamed Text: {{temp:generate-stream-output}}\",\n          },\n        ],\n      },\n    ],\n  });\n}\n\n// ============================================================================\n// GENERATION: Hooks Modal\n// ============================================================================\n\nasync function openHooksModal() {\n  await api.v1.ui.modal.open({\n    title: \"Hooks\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Hooks let your script react to and modify various events in the application. Register them using `api.v1.hooks.register(hookName, callback)`.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Available hooks:**\\n- `onGenerationRequested` — Before context is built. Can cancel generation.\\n- `onBeforeContextBuild` — Modify lorebook entries, memory, AN before context assembly.\\n- `onContextBuilt` — Modify the final messages array before sending to AI.\\n- `onResponse` — Receives streaming tokens as they arrive.\\n- `onGenerationEnd` — After generation completes.\\n- `onScriptsLoaded` — All scripts have finished loading.\\n- `onHistoryNavigated` — User or script performed undo/redo/jump.\\n- `onLorebookEntrySelected` — User selected an entry in the lorebook UI.\\n- `onTextAdventureInput` — User submitted input in Text Adventure mode.\\n- `onDocumentConvertedToText` — Document was serialized for context or export.\",\n      },\n      HR,\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Live Hook Status**\\n\\nThis script registers several hooks. The values below update in real-time as events occur:\",\n      },\n      {\n        type: \"box\",\n        style: { backgroundColor: \"bg1\" },\n        content: [\n          { type: \"text\", text: \"onScriptsLoaded: {{hook-scripts-loaded}}\" },\n          {\n            type: \"text\",\n            text: \"onGenerationRequested: {{hook-gen-requested}}\",\n          },\n          { type: \"text\", text: \"onGenerationEnd: {{hook-gen-end}}\" },\n          { type: \"text\", text: \"onHistoryNavigated: {{hook-history}}\" },\n        ],\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**onResponse log** — Generate some text to see streaming tokens appear here:\",\n      },\n      {\n        type: \"box\",\n        style: {\n          padding: \"8px\",\n          backgroundColor: \"bg1\",\n          fontFamily: \"monospace\",\n          fontSize: \"11px\",\n          maxHeight: \"100px\",\n          overflow: \"auto\",\n        },\n        content: [\n          { type: \"text\", text: \"{{hook-response-log}}\", style: { margin: 0 } },\n        ],\n      },\n      {\n        type: \"button\",\n        text: \"Clear Logs\",\n        callback: () => {\n          api.v1.storage.set(\"hook-response-log\", \"\");\n          api.v1.storage.set(\"hook-gen-requested\", \"(generate to see)\");\n          api.v1.storage.set(\"hook-gen-end\", \"(generate to see)\");\n        },\n      },\n    ],\n  });\n}\n\n// ============================================================================\n// PERMISSIONS Modal\n// ============================================================================\n\nasync function openPermissionsModal() {\n  api.v1.storage.set(\"perm-status\", \"\");\n  await api.v1.ui.modal.open({\n    title: \"Permissions\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Certain APIs require explicit user permission before they can be used. This protects users from scripts that might modify their content or access sensitive features without consent.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Available permissions:**\\n- `documentEdit` — Modify document content (add, update, remove paragraphs)\\n- `storyEdit` — Modify memory, author's note, system prompt, generation parameters\\n- `lorebookEdit` — Create, update, or delete lorebook entries\\n- `editorDecorations` — Add visual effects or create temporary ui elements in the editor\\n- `clipboardWrite` — Copy text to the system clipboard\\n- `fileInput` — Prompt the user to select a file from their computer\\n- `fileDownload` — Save/download files to the user's computer\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Use `api.v1.permissions.has(name)` to check, `api.v1.permissions.request(name, reason?)` to request, and `api.v1.permissions.list()` to see all granted permissions.\",\n      },\n      ...codeExample(\n        \"perms\",\n        \"Check Permissions\",\n        \"\",\n        `const all = await api.v1.permissions.list();\nconst hasDoc = await api.v1.permissions.has(\"documentEdit\");\nreturn { \n  granted: all.length ? all : \"(none)\", \n  hasDocumentEdit: hasDoc \n};`,\n        \"result-perms\",\n        150,\n      ),\n      HR,\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Request Permissions**\\n\\nClick a button to request that permission. A dialog will appear asking the user to approve. You've probably already seen one of them in when running another demo. If the permission has already been granted previously no modal will be shown.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        wrap: true,\n        content: [\n          {\n            type: \"button\",\n            text: \"documentEdit\",\n            callback: async () => {\n              api.v1.storage.set(\n                \"perm-status\",\n                (await api.v1.permissions.request(\"documentEdit\"))\n                  ? \"✓ documentEdit granted\"\n                  : \"✗ Denied\",\n              );\n            },\n          },\n          {\n            type: \"button\",\n            text: \"storyEdit\",\n            callback: async () => {\n              api.v1.storage.set(\n                \"perm-status\",\n                (await api.v1.permissions.request(\"storyEdit\"))\n                  ? \"✓ storyEdit granted\"\n                  : \"✗ Denied\",\n              );\n            },\n          },\n          {\n            type: \"button\",\n            text: \"editorDecorations\",\n            callback: async () => {\n              api.v1.storage.set(\n                \"perm-status\",\n                (await api.v1.permissions.request(\"editorDecorations\"))\n                  ? \"✓ editorDecorations granted\"\n                  : \"✗ Denied\",\n              );\n            },\n          },\n          {\n            type: \"button\",\n            text: \"clipboardWrite\",\n            callback: async () => {\n              api.v1.storage.set(\n                \"perm-status\",\n                (await api.v1.permissions.request(\"clipboardWrite\"))\n                  ? \"✓ clipboardWrite granted\"\n                  : \"✗ Denied\",\n              );\n            },\n          },\n        ],\n      },\n      {\n        type: \"box\",\n        style: { backgroundColor: \"bg1\" },\n        content: [{ type: \"text\", text: \"Result: {{perm-status}}\" }],\n      },\n    ],\n  });\n}\n// ============================================================================\n// UI: Modals Modal\n// ============================================================================\n\nasync function openModalsModal() {\n  const modal = await api.v1.ui.modal.open({\n    title: \"Modals\",\n    size: \"medium\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Modals** (`api.v1.ui.modal.open()`) are dialog boxes that block interaction with the rest of the app until closed. They're good for focused tasks that need the user's full attention.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The `open()` call returns `{ update, close, isClosed, closed }` — you can dynamically update the modal's content or other attributes, close it programmatically, or await the `closed` promise to respond ot the user closing it.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Modals come in a few preset sizes. **Try resizing this modal:**\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        content: [\n          {\n            type: \"button\",\n            text: \"Small\",\n            callback: () => modal.update({ size: \"small\" }),\n          },\n          {\n            type: \"button\",\n            text: \"Medium\",\n            callback: () => modal.update({ size: \"medium\" }),\n          },\n          {\n            type: \"button\",\n            text: \"Large\",\n            callback: () => modal.update({ size: \"large\" }),\n          },\n        ],\n      },\n      HR,\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Windows** (`api.v1.ui.window.open()`) are floating panels that don't block interaction. Users can drag them around, resize them, and continue working in the editor. Great for tools that need to stay open while editing.\",\n      },\n      {\n        type: \"button\",\n        text: \"Open a Window\",\n        callback: () => {\n          api.v1.ui.window.open({\n            title: \"Example Window\",\n            defaultWidth: 320,\n            defaultHeight: 200,\n            resizable: true,\n            content: [\n              {\n                type: \"text\",\n                text: \"This window floats over the editor. You can drag it by the title bar and resize it.\",\n              },\n              {\n                type: \"button\",\n                text: \"Open Another\",\n                callback: () =>\n                  api.v1.ui.window.open({\n                    title: \"Nested Window\",\n                    defaultWidth: 250,\n                    defaultHeight: 120,\n                    content: [\n                      { type: \"text\", text: \"Windows can open other windows!\" },\n                    ],\n                  }),\n              },\n              {\n                type: \"button\",\n                text: \"Toast\",\n                callback: () =>\n                  api.v1.ui.toast(\"Hello from window!\", { type: \"info\" }),\n              },\n            ],\n          });\n        },\n      },\n    ],\n  });\n}\n\n// ============================================================================\n// UI: Windows Window\n// ============================================================================\n\nfunction openWindowsWindow() {\n  api.v1.storage.set(\"window-count\", 0);\n  api.v1.ui.window.open({\n    id: \"windows-window\",\n    title: \"Windows API\",\n    defaultWidth: 700,\n    defaultHeight: 600,\n    resizable: true,\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Windows** (`api.v1.ui.window.open()`) are floating panels that don't block interaction. Users can drag them around, resize them, and continue working in the editor. Great for tools that need to stay open while editing.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"One caveat however is that they aren't a great experience on mobile devices. If you want your script to be usable on mobile devices, providing an alternative is recommended.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"The `open()` call returns `{ update, close, isClosed, closed }` — you can dynamically update the window's content or other attributes, close it programmatically, or await the `closed` promise to respond to the user closing it.\",\n      },\n      ...codeExample(\n        \"window-open\",\n        \"Open a New Window\",\n        \"Each click opens a new window with its own counter.\",\n        `const count = (await api.v1.storage.get(\"window-count\")) || 0;\napi.v1.storage.set(\"window-count\", count + 1);\napi.v1.ui.window.open({\n  title: \"Window #\" + (count + 1),\n  defaultWidth: 300,\n  defaultHeight: 150,\n  content: [\n    { type: \"text\", text: \"This is window number \" + (count + 1) + \".\" },\n  ]\n});\nreturn \"Opened window #\" + (count + 1);`,\n        \"result-window-open\",\n        250,\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// UI: Toasts Modal\n// ============================================================================\n\nasync function openToastsModal() {\n  await api.v1.ui.modal.open({\n    title: \"Toast Notifications\",\n    size: \"medium\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Toast notifications are brief, non-blocking messages that appear at the edge of the screen. They're perfect for confirming actions, showing status updates, or displaying non-critical information.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Use `api.v1.ui.toast(message, options)` where options can include `type` (info, success, warning, error), `autoClose` (boolean), and `id` (for updating a toast if it already exists).\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        wrap: true,\n        content: [\n          {\n            type: \"button\",\n            text: \"Info\",\n            callback: () =>\n              api.v1.ui.toast(\"This is an informational message\", {\n                type: \"info\",\n              }),\n          },\n          {\n            type: \"button\",\n            text: \"Success\",\n            callback: () =>\n              api.v1.ui.toast(\"Operation completed successfully!\", {\n                type: \"success\",\n              }),\n          },\n          {\n            type: \"button\",\n            text: \"Warning\",\n            callback: () =>\n              api.v1.ui.toast(\"Something might need attention\", {\n                type: \"warning\",\n              }),\n          },\n          {\n            type: \"button\",\n            text: \"Error\",\n            callback: () =>\n              api.v1.ui.toast(\"Something went wrong!\", { type: \"error\" }),\n          },\n        ],\n      },\n      HR,\n      {\n        type: \"button\",\n        text: \"Persistent Toast (won't auto-close)\",\n        callback: () =>\n          api.v1.ui.toast(\"This toast stays until dismissed\", {\n            autoClose: false,\n            id: \"persistent-demo\",\n          }),\n      },\n      ...codeExample(\n        \"toast-update\",\n        \"Update Existing Toast\",\n        \"Clicking this button will update the persistent toast above if it exists instead of creating a new one.\",\n        `api.v1.ui.toast(\"This toast has been updated!\", { autoClose: false, id: \"persistent-demo\" });\nreturn \"Updated or created the persistent toast.\";`,\n        \"result-toast-update\",\n        150,\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// UI: Extensions Modal\n// ============================================================================\n\nasync function openExtensionsModal() {\n  await api.v1.ui.modal.open({\n    title: \"UI Extensions\",\n    size: \"large\",\n    content: [\n      {\n        type: \"container\",\n        style: { maxHeight: \"800px\" },\n        content: [\n          {\n            type: \"text\",\n            markdown: true,\n            text: \"Scripts can extend the NovelAI interface by registering various UI elements using `api.v1.ui.register()`. These integrate (relatively) seamlessly with the existing UI.\",\n          },\n          {\n            type: \"text\",\n            markdown: true,\n            text: \"**Extension types:**\\n- `scriptPanel` — Tabs in the script panel (like this demo uses)\\n- `sidebarPanel` — Panels in the right sidebar/infobar\\n- `lorebookPanel` — Panels in the lorebook entry editor\\n- `toolbarButton` — Buttons in the editor toolbar\\n- `contextMenuButton` — Items in the right-click context menu\\n- `toolboxOption` — Options in the Writer's Toolbox\",\n          },\n          {\n            type: \"text\",\n            markdown: true,\n            text: 'Aside from the code examples below, there\\'s also examples of the Lorebook and Sidebar panels in their respective places; the \"script\" tab of Lorebook entries and categories, and the \"...\" tab in the right sidebar.',\n          },\n          HR,\n          {\n            type: \"text\",\n            markdown: true,\n            text: \" `api.v1.ui.update()` can be used to either update existing UI Extentions or to add new ones without removing the existing ones. When using `update` you need to assign each UI Extension a unique id. The examples below will use this to add some new extensions.\",\n          },\n          ...codeExample(\n            \"ui-extensions\",\n            \"Toolbar Button\",\n            \"Adds a button to the editor toolbar that shows a toast when clicked.\",\n            `await api.v1.ui.update([{\n  id: \"example-toolbar-button\",\n  type: \"toolbarButton\",\n  text: \"Demo\",\n  iconId: \"star\",\n  callback: () => api.v1.ui.toast(\"Toolbar button clicked!\", { type: \"info\" })\n}]);\nreturn \"Toolbar button added! You should see a ★ Demo button in the toolbar below the editor.\";`,\n            \"result-ui-extensions\",\n            200,\n          ),\n          ...codeExample(\n            \"ui-extensions-2\",\n            \"Context Menu Item\",\n            \"Adds an item to the right-click context menu that shows a toast with the selected text when clicked.\",\n            `await api.v1.ui.update([{\n  id: \"example-context-menu-item\",\n  type: \"contextMenuButton\",\n  text: \"Script Demo Action\",\n  callback: async ({ selection }) => {\n    const text = await api.v1.document.textFromSelection({ from: selection.from, to: selection.to });\n    api.v1.ui.toast(\\`Selected \\${text.length} characters: \"\\${text.slice(0, 30)}\\${text.length > 30 ? \"...\" : \"\"}\"\\`, { type: \"info\" });\n  }\n}]);\nreturn \"Context menu item added! Right-click in the editor to see it.\";`,\n            \"result-ui-extensions-2\",\n            250,\n          ),\n          ...codeExample(\n            \"ui-extensions-remove\",\n            \"Remove Extensions\",\n            \"Removes the toolbar button and context menu item added in the previous examples.\",\n            `api.v1.ui.remove([\"example-toolbar-button\", \"example-context-menu-item\"]);\nreturn \"Removed the dynamic UI extensions.\";`,\n            \"result-ui-extensions-remove\",\n            100,\n          ),\n          HR,\n          {\n            type: \"text\",\n            markdown: true,\n            text: \"**Panel Control**\\n\\nYou can programmatically open specific panels or close the current one:\",\n          },\n          {\n            type: \"row\",\n            spacing: \"start\",\n            content: [\n              {\n                type: \"button\",\n                text: \"Open Basics Panel\",\n                callback: () => api.v1.ui.openPanel(\"basics-panel\"),\n              },\n              {\n                type: \"button\",\n                text: \"Close Current Panel\",\n                callback: () => api.v1.ui.closePanel(),\n              },\n            ],\n          },\n        ],\n      },\n    ],\n  });\n}\n\n// ============================================================================\n// UI: Decorations Window\n// ============================================================================\n\nfunction openDecorationsWindow() {\n  api.v1.storage.set(\"deco-status\", \"\");\n  api.v1.ui.window.open({\n    id: \"decorations-window\",\n    title: \"Editor Decorations\",\n    defaultWidth: 700,\n    defaultHeight: 600,\n    resizable: true,\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Decorations add visual overlays to the editor **without modifying the actual document content**. They're perfect for highlighting, annotations, warnings, or embedding interactive widgets.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Creating decorations requires the `editorDecorations` permission.\",\n      },\n      HR,\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Rules allow you to apply styling to text or entire paragraphs that match a regular expression. Be very careful what regular expression you use. Regular expressions that are slow to evaluate could significantly slow down the editor. Rules are evaluated per section, so cannot match strings over multiple paragraphs.\",\n      },\n      ...codeExample(\n        \"deco-rules\",\n        \"Galena Highlight\",\n        \"Registers a rule that highlights the word 'Galena' in yellow wherever it appears.\",\n        `if (!(await api.v1.permissions.request(\"editorDecorations\"))){\n  return \"Permission to create decorations denied.\"\n}\napi.v1.editor.decorations.registerRules([{\n  id: \"galena-highlight\",\n  type: \"inline\",\n  match: /\\\\bGalena\\\\b/,\n  style: { backgroundColor: \"rgba(255, 255, 0, 0.3)\" }\n}]);\nreturn \"Highlighting 'Galena' in the editor.\";`,\n        \"result-deco-rules\",\n        200,\n      ),\n      {\n        type: \"button\",\n        text: \"Clear Rules\",\n        callback: () => {\n          api.v1.editor.decorations.clearRules();\n        },\n      },\n      HR,\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Markers let you to apply styling to a specific range of text or paragraph.\",\n      },\n      ...codeExample(\n        \"deco-markers\",\n        \"Mark Paragraph\",\n        \"Adds a border to the left of the paragraph your cursor is currently in.\",\n        `if (!(await api.v1.permissions.request(\"editorDecorations\"))){\n  return \"Permission to create decorations denied.\"\n}\nconst pos = await api.v1.editor.selection.get();\nif (pos.from === null) {\n  return \"No selection!\";\n}\nconst fromSection = pos.from.sectionId;\nawait api.v1.editor.decorations.createMarker({\n  type: \"node\",\n  sectionId: fromSection,\n  style: { borderLeft: \"4px solid #66ccff\", paddingLeft: \"4px\" }\n});\nreturn \"Paragraph marked in the editor.\";`,\n        \"result-deco-markers\",\n        200,\n      ),\n      {\n        type: \"button\",\n        text: \"Clear Markers\",\n        callback: () => {\n          api.v1.editor.decorations.clearMarkers();\n        },\n      },\n      HR,\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Widgets are actual UI elements (buttons, boxes, etc.) that can be embedded directly in the editor content. They can be placed either inline at a specific position within a paragraph or after a paragraph.\",\n      },\n      ...codeExample(\n        \"deco-widgets\",\n        \"Add Widget\",\n        \"Adds a widget containing a set of buttons below the last paragraph in the document.\",\n        `if (!(await api.v1.permissions.request(\"editorDecorations\"))){\n  return \"Permission to create decorations denied.\"\n}\nconst sections = await api.v1.document.scan();\nif (!sections.length) {\n  return \"Document is empty!\";\n}\nconst lastSection = sections[sections.length - 1];\nawait api.v1.editor.decorations.createWidget({\n  type: \"node\",\n  sectionId: lastSection.sectionId,\n  side: \"after\",\n  content: [{\n    type: \"box\",\n    style: { width: '100%' },\n    content: [\n      { type: \"text\", markdown: true, text: \"🎉 **Congrats!** This widget was added by a script.\" },\n      { type: \"button\", text: \"Click Me\", callback: () => api.v1.ui.toast(\"Widget button clicked!\", { type: \"success\" }) }\n    ]\n  }]\n});\nreturn \"Widget added below the last paragraph.\";`,\n        \"result-deco-widgets\",\n        250,\n      ),\n      {\n        type: \"button\",\n        text: \"Clear Widgets\",\n        callback: () => {\n          api.v1.editor.decorations.clearWidgets();\n        },\n      },\n    ],\n  });\n}\n\n// ============================================================================\n// FILES & CLIPBOARD Modal\n// ============================================================================\n\nasync function openFilesModal() {\n  api.v1.storage.set(\"file-content\", \"\");\n  await api.v1.ui.modal.open({\n    title: \"Files & Clipboard\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Scripts can interact in limited ways with the user's clipboard and file system through permission-gated APIs. Only writing to the clipboard is possible, reading the clipboard is not permitted. File access is limited to prompting an input file and saving files through the default browser download behaviour.\",\n      },\n      ...codeExample(\n        \"clipboard\",\n        \"Copy to Clipboard\",\n        \"Copy text to the system clipboard using `api.v1.clipboard.writeText()`.\",\n        `if (!(await api.v1.permissions.request(\"clipboardWrite\"))){\n  return \"Permission to write to clipboard denied.\"\n}\nawait api.v1.clipboard.writeText(\"A script put this text here at \" + new Date().toLocaleTimeString());\nreturn \"Text copied to clipboard! Try pasting somewhere.\";`,\n        \"result-clipboard\",\n        150,\n      ),\n      HR,\n      ...codeExample(\n        \"fileInput\",\n        \"Read Text File\",\n        \"Scripts can prompt the user to select a file from their computer and read its contents using `api.v1.file.prompt()`.\",\n        `if (!(await api.v1.permissions.request(\"fileInput\"))){\n  return \"Permission to read files denied.\"\n}\nconst content = await api.v1.file.prompt({ accept: \".txt,.md,.json\" });\nif (content) {\n  return \"Read \" + content.length + \" characters.\";\n} else {\n  return \"No file selected.\";\n}`,\n        \"result-file-input\",\n        200,\n      ),\n      HR,\n      ...codeExample(\n        \"fileDownload\",\n        \"Save Text File\",\n        \"Scripts can save files to the user's computer by triggering a download using `api.v1.file.save()`. Only plain text is supported.\",\n        `if (!(await api.v1.permissions.request(\"fileDownload\"))){\n  return \"Permission to download files denied.\"\n}\nconst content = \\`This file was generated by a script on \\${new Date().toLocaleString()}.\\n\\`;\nawait api.v1.file.save(\"script-generated-file.txt\", content);\nreturn \"Download started! Check your browser's downloads.\";`,\n        \"result-file-download\",\n        200,\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// UTILITIES Modal\n// ============================================================================\n\nasync function openUtilitiesModal() {\n  api.v1.storage.set(\"timer-status\", \"\");\n  await api.v1.ui.modal.open({\n    title: \"Utilities\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Various utility functions for common tasks.\",\n      },\n      ...codeExample(\n        \"random\",\n        \"Randomness\",\n        \"`api.v1.random` provides several randomness functions, including dice notation parsing.\",\n        `return {\n  int: api.v1.random.int(1, 100),\n  float: api.v1.random.float(0, 1).toFixed(4),\n  bool: api.v1.random.bool(),\n  weighted: api.v1.random.bool(0.8), // 80% true\n  dice: api.v1.random.roll(\"2d6+3\").total,\n};`,\n        \"result-random\",\n        150,\n      ),\n      HR,\n      ...codeExample(\n        \"tokenizer\",\n        \"Tokenizer\",\n        \"Encode text to tokens and decode back. Useful for estimating context usage.\",\n        `const text = \"Hello, world! How are you today?\";\nconst tokens = await api.v1.tokenizer.encode(text, \"glm-4-6\");\nconst decoded = await api.v1.tokenizer.decode(tokens, \"glm-4-6\");\nconst maxTokens = await api.v1.maxTokens(\"glm-4-6\");\nreturn { \n  original: text, \n  tokenCount: tokens.length,\n  decoded: decoded,\n  modelMaxTokens: maxTokens\n};`,\n        \"result-tokenizer\",\n        220,\n      ),\n      HR,\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"**Timers**\\n\\n`api.v1.timers` provides `setTimeout`, `clearTimeout`, and `sleep` for async delays.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        content: [\n          {\n            type: \"button\",\n            text: \"3 Second Timeout\",\n            callback: () => {\n              api.v1.storage.set(\"timer-status\", \"Waiting 3 seconds...\");\n              api.v1.timers.setTimeout(() => {\n                api.v1.storage.set(\"timer-status\", \"Timer fired! ✓\");\n                api.v1.ui.toast(\"3 seconds elapsed!\", { type: \"success\" });\n              }, 3000);\n            },\n          },\n          {\n            type: \"button\",\n            text: \"Count to 5\",\n            callback: async () => {\n              for (let i = 1; i <= 5; i++) {\n                api.v1.storage.set(\"timer-status\", `Counting: ${i}...`);\n                await api.v1.timers.sleep(600);\n              }\n              api.v1.storage.set(\"timer-status\", \"Done counting! ✓\");\n            },\n          },\n        ],\n      },\n      {\n        type: \"box\",\n        style: { padding: \"8px\", backgroundColor: \"bg1\", borderRadius: \"4px\" },\n        content: [{ type: \"text\", text: \"{{timer-status}} \" }],\n      },\n      HR,\n      ...codeExample(\n        \"uuid\",\n        \"UUIDs\",\n        \"Unique identifiers are a common need in scripts, `api.v1.uuid()` can be used to generate them.\",\n        `return api.v1.uuid()`,\n        \"result-uuid\",\n      ),\n    ],\n  });\n}\n\n// ============================================================================\n// MESSAGING Modal\n// ============================================================================\n\nasync function openMessagingModal() {\n  api.v1.storage.set(\"last-message\", \"\");\n  await api.v1.ui.modal.open({\n    title: \"Script Messaging\",\n    size: \"large\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Scripts can communicate with each other using the messaging API.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"- `api.v1.messaging.send(scriptId, data, channel?)` — Send to a specific script\\n- `api.v1.messaging.broadcast(data, channel?)` — Send to all scripts\\n- `api.v1.messaging.onMessage(callback, filter?)` — Subscribe to messages\\n- `api.v1.messaging.unsubscribe(id)` — Unsubscribe\",\n      },\n      ...codeExample(\n        \"messaging\",\n        \"Send & Receive\",\n        \"This example subscribes, sends a message to itself, waits for delivery, then unsubscribes. Normally you'd send messages to other scripts, but this script is all alone.\",\n        `// Subscribe to messages on the \"demo\" channel\nconst subId = await api.v1.messaging.onMessage((msg) => {\n  api.v1.storage.set(\"last-message\", JSON.stringify(msg.data, null, 2));\n}, { channel: \"demo\" });\n\n// Send a message to ourselves\nawait api.v1.messaging.send(\n  api.v1.script.id, \n  { type: \"greeting\", text: \"Hello!\", timestamp: Date.now() }, \n  \"demo\"\n);\n\n// Wait for delivery\nawait api.v1.timers.sleep(100);\n\n// Clean up\nawait api.v1.messaging.unsubscribe(subId);\nreturn \"Message sent and received!\";`,\n        \"result-messaging\",\n        400,\n      ),\n      { type: \"text\", markdown: true, text: \"**Last received message:**\" },\n      {\n        type: \"box\",\n        style: {\n          padding: \"8px\",\n          backgroundColor: \"bg1\",\n          borderRadius: \"4px\",\n          fontFamily: \"monospace\",\n          fontSize: \"12px\",\n          whiteSpace: \"pre-wrap\",\n        },\n        content: [{ type: \"text\", text: \"{{last-message}}\" }],\n      },\n    ],\n  });\n}\n// ============================================================================\n// Register UI Extensions\n// ============================================================================\n\napi.v1.ui.register([\n  // ==================== WELCOME Panel ====================\n  {\n    id: \"welcome-panel\",\n    name: \"Welcome\",\n    type: \"scriptPanel\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"## Welcome to the Scripting Demo!\\n\\nThis demo script showcases various features of the NovelAI scripting API. Use the panels on the right to explore different parts of the scripting API, see code examples, and try them out yourself.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Each panel contains explanations and code examples demonstrating specific features. Click the buttons to open modals or windows where you can interact with the examples directly.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"If you haven't seen it already, I'd also recommend reading the docs at https://docs.novelai.net/en/scripting/introduction for more information not covered here.\",\n      },\n    ],\n  },\n  // ==================== BASICS Panel ====================\n  {\n    id: \"basics-panel\",\n    name: \"Basics\",\n    type: \"scriptPanel\",\n    iconId: \"book\",\n    content: [\n      { type: \"text\", markdown: true, text: \"## Scripting Basics\" },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Get started with the fundamental APIs for logging, storage, configuration, and understanding the scripting environment.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        wrap: true,\n        content: [\n          { type: \"button\", text: \"The API Object\", callback: openAPIModal },\n          { type: \"button\", text: \"Logging\", callback: openLoggingModal },\n          { type: \"button\", text: \"Storage\", callback: openStorageModal },\n          {\n            type: \"button\",\n            text: \"History Storage\",\n            callback: openHistoryStorageModal,\n          },\n          {\n            type: \"button\",\n            text: \"Config & Script Info\",\n            callback: openConfigModal,\n          },\n        ],\n      },\n    ],\n  },\n\n  // ==================== STORY Panel ====================\n  {\n    name: \"Story\",\n    type: \"scriptPanel\",\n    iconId: \"file-text\",\n    content: [\n      { type: \"text\", markdown: true, text: \"## Story Data\" },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Scripts can access and modify various story values: Memory, Author's Note, System Prompt, Prefill, Generation Parameters, and Lorebook.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        wrap: true,\n        content: [\n          {\n            type: \"button\",\n            text: \"Memory / AN / System Prompt\",\n            callback: openMemoryModal,\n          },\n          {\n            type: \"button\",\n            text: \"Generation Parameters\",\n            callback: openGenParamsModal,\n          },\n          { type: \"button\", text: \"Lorebook\", callback: openLorebookModal },\n        ],\n      },\n    ],\n  },\n\n  // ==================== DOCUMENT Panel ====================\n  {\n    name: \"Document\",\n    type: \"scriptPanel\",\n    iconId: \"edit\",\n    content: [\n      { type: \"text\", markdown: true, text: \"## Document API\" },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Programmatically read and modify the editor content. Scan paragraphs, handle selections, apply formatting, and navigate history.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"*Opens in a floating window so you can see the editor while testing.*\",\n      },\n      { type: \"button\", text: \"Document\", callback: openDocumentWindow },\n    ],\n  },\n\n  // ==================== GENERATION Panel ====================\n  {\n    name: \"Generation\",\n    type: \"scriptPanel\",\n    iconId: \"zap\",\n    content: [\n      { type: \"text\", markdown: true, text: \"## Text Generation\" },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"Make AI generation requests from scripts and react to user generation events with hooks.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        wrap: true,\n        content: [\n          {\n            type: \"button\",\n            text: \"Generate Text\",\n            callback: openGenerateModal,\n          },\n          { type: \"button\", text: \"Hooks\", callback: openHooksModal },\n        ],\n      },\n    ],\n  },\n\n  // ==================== PERMISSIONS Panel ====================\n  {\n    name: \"Permissions\",\n    type: \"scriptPanel\",\n    iconId: \"shield\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"## Permission System\\n\\nSensitive APIs require explicit user permission. Scripts can check, request, and list permissions.\",\n      },\n      {\n        type: \"button\",\n        text: \"Explore Permissions\",\n        callback: openPermissionsModal,\n      },\n    ],\n  },\n\n  // ==================== UI Panel ====================\n  {\n    name: \"UI\",\n    type: \"scriptPanel\",\n    iconId: \"layout\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"## UI Components\\n\\nCreate modals, windows, toasts, and extend the NovelAI interface with custom buttons, panels, and menu items.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        wrap: true,\n        content: [\n          { type: \"button\", text: \"Modals\", callback: openModalsModal },\n          { type: \"button\", text: \"Windows\", callback: openWindowsWindow },\n          {\n            type: \"button\",\n            text: \"Toast Notifications\",\n            callback: openToastsModal,\n          },\n          {\n            type: \"button\",\n            text: \"UI Extensions\",\n            callback: openExtensionsModal,\n          },\n        ],\n      },\n    ],\n  },\n\n  // ==================== DECORATIONS Panel ====================\n  {\n    name: \"Decorations\",\n    type: \"scriptPanel\",\n    iconId: \"eye\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"## Editor Decorations\\n\\nAdd visual overlays to the editor: pattern-based highlighting, range markers, and embedded UI widgets — all without modifying the actual document.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"*Opens in a floating window so you can see decorations appear in the editor.*\",\n      },\n      { type: \"button\", text: \"Decorations\", callback: openDecorationsWindow },\n    ],\n  },\n\n  // ==================== Misc Utilities Panel ====================\n  {\n    name: \"Misc\",\n    type: \"scriptPanel\",\n    iconId: \"folder\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"## Misc Utilities\\n\\nClipboard access, file reading/writing, randomness, tokenization, timers, and inter-script messaging.\",\n      },\n      {\n        type: \"row\",\n        spacing: \"start\",\n        wrap: true,\n        content: [\n          {\n            type: \"button\",\n            text: \"Files & Clipboard\",\n            callback: openFilesModal,\n          },\n          { type: \"button\", text: \"Utilities\", callback: openUtilitiesModal },\n          {\n            type: \"button\",\n            text: \"Script Messaging\",\n            callback: openMessagingModal,\n          },\n        ],\n      },\n    ],\n  },\n\n  // ==================== Sidebar Panel Demo ====================\n  {\n    id: \"demo-sidebar\",\n    name: \"Script Demo\",\n    type: \"sidebarPanel\",\n    iconId: \"star\",\n    content: [\n      {\n        type: \"text\",\n        markdown: true,\n        text: \"## Sidebar Panel\\n\\nThis panel appears in the right sidebar (infobar). Sidebar panels are great for tools that should stay visible while writing or things best suited to vertical layouts.\",\n      },\n      {\n        type: \"text\",\n        markdown: true,\n        text: 'They\\'re registered using `type: \"sidebarPanel\"` in `api.v1.ui.register()` or `api.v1.ui.update()`.',\n      },\n      ...codeExample(\n        \"sidebar-panel\",\n        \"Multiple Sidebar Panels\",\n        \"You can have more than one sidebar panel. They'll each get their own sub-tab in the sidebar. The code below adds another panel alongside this one.\",\n        `await api.v1.ui.update([{\n  id: \"demo-sidebar-2\",\n  name: \"Another Demo\",\n  type: \"sidebarPanel\",\n  iconId: \"code\",\n  content: [\n    { type: \"text\", markdown: true, text: \\`## Another Sidebar Panel\\n\\nThis is another sidebar panel added dynamically via \\\\\\`api.v1.ui.update()\\\\\\`.\\` },\n  ]\n}]);\nreturn \"Added another sidebar panel! Look for the tabs that appeared at the top of the sidebar.\";`,\n        \"result-sidebar-panel\",\n        250,\n      ),\n    ],\n  },\n\n  // ==================== Writer's Toolbox Options ====================\n  {\n    type: \"toolboxOption\",\n    name: \"Reverse Text\",\n    description: \"Reverses the selected text character by character.\",\n    callback: ({ text }) => ({ text: text.split(\"\").reverse().join(\"\") }),\n  },\n  {\n    type: \"toolboxOption\",\n    name: \"UPPERCASE\",\n    description: \"Converts the selected text to uppercase.\",\n    callback: ({ text }) => ({ text: text.toUpperCase() }),\n  },\n]);\n",
+      "createdAt": 1760434819039,
+      "updatedAt": 1764509668009,
+      "id": "08bf4534-de80-4e1e-8750-b1e1e3e1ceba",
+      "name": "Scripting Demo",
+      "description": "A demo script that contains examples of many of the scripting API's functions.",
+      "author": "ght901",
+      "version": "2.0.0",
+      "config": [
+        {
+          "name": "exampleSetting",
+          "prettyName": "Example Setting",
+          "type": "string",
+          "default": "I'm config text!",
+          "options": [],
+          "description": "",
+          "multiline": false,
+          "max": "",
+          "min": "",
+          "decimal": true
+        },
+        {
+          "name": "exampleNumber",
+          "prettyName": "Example Number",
+          "type": "number",
+          "default": 6000,
+          "options": [],
+          "description": "",
+          "multiline": false,
+          "max": "",
+          "min": "",
+          "decimal": true
+        }
+      ],
+      "memoryLimit": 32
+    }
+  ]
+}

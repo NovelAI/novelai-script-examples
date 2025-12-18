@@ -1,0 +1,318 @@
+/*---
+compatibilityVersion: naiscript-1.0
+id: 95130fc3-afc4-4cb8-9426-160c48ef5ee2
+name: Notes
+createdAt: 1760426651598
+updatedAt: 1766042868172
+version: 1.1.1
+author: ght901
+description: This script adds a script panel where you can create and edit notes.
+memoryLimit: 8
+config:
+  - name: rename_on_create
+    prettyName: Name on Create
+    type: boolean
+    default: true
+  - name: open_on_create
+    prettyName: Open on Create
+    type: boolean
+    default: true
+---*/
+interface Note {
+    id: string;
+    title: string;
+}
+
+type WindowHandle = {
+    update: (options: Partial<WindowOptions>) => void;
+    close: () => void;
+    closed: Promise<void>;
+};
+
+type ModalHandle = {
+    close: () => void;
+    closed: Promise<void>;
+};
+
+// To store our notes
+let notes: Note[] = [];
+
+// Config values
+let openOnCreate: boolean;
+let renameOnCreate: boolean;
+
+// Track open windows
+const openWindows = new Map<string, WindowHandle>();
+
+// Initialize - load notes from storage
+async function init(): Promise<void> {
+    notes = (await api.v1.storage.get("notes")) || [];
+    await updateNotesPanel();
+}
+
+
+// Open a note in a window
+async function openNote(noteId: string): Promise<void> {
+    const note = notes.find((n) => n.id === noteId);
+    if (!note) return;
+
+    const window = await api.v1.ui.window.open({
+        title: note.title,
+        defaultWidth: 600,
+        defaultHeight: 400,
+        minWidth: 400,
+        minHeight: 300,
+        resizable: true,
+        content: [
+            {
+                type: "container",
+                style: { display: "flex", flexDirection: "column", height: "100%" },
+                content: [
+                    {
+                        type: "multilineTextInput",
+                        storageKey: `note_${noteId}`,
+                        placeholder: "Write your note here...",
+                        style: {
+                            flex: 1,
+                            width: "100%",
+                            resize: "none",
+                            padding: "12px",
+                            fontSize: "14px",
+                            lineHeight: "1.6",
+                            margin: 0,
+                        },
+                    },
+                ],
+            },
+        ],
+    });
+    
+    openWindows.set(noteId, window);
+    window.closed.then(() => {
+        openWindows.delete(noteId);
+    });
+}
+
+// Delete a note
+async function deleteNote(noteId: string): Promise<void> {
+    notes = notes.filter((n) => n.id !== noteId);
+    
+    const windowHandle = openWindows.get(noteId);
+    if (windowHandle) {
+        windowHandle.close();
+        openWindows.delete(noteId);
+    }
+    
+    await api.v1.storage.set("notes", notes);
+    await api.v1.storage.remove(`note_${noteId}`);
+    await updateNotesPanel();
+}
+
+// Create a new note
+async function createNote(): Promise<void> {
+    const noteId = api.v1.uuid();
+    const noteNumber = notes.length + 1;
+    const note: Note = {
+        id: noteId,
+        title: `Note ${noteNumber}`,
+    };
+
+    notes.push(note);
+    await api.v1.storage.set("notes", notes);
+    await api.v1.storage.set(`note_${noteId}`, "");
+    await updateNotesPanel();
+
+    // Automatically open the new note if configured
+    if (openOnCreate) {
+        openNote(noteId);
+    }
+    
+    // Prompt to rename the new note if configured
+    if (renameOnCreate) {
+        await initiateRename(note);
+    }
+}
+
+// Initiate renaming a note
+async function initiateRename(note: Note): Promise<void> {
+    let newTitle = note.title;
+    
+    const modal = await api.v1.ui.modal.open({
+        title: "Rename Note",
+        content: [
+            {
+                type: "textInput",
+                placeholder: "Enter new note title...",
+                initialValue: note.title,
+                onChange: (value) => {
+                    newTitle = value;
+                },
+                onSubmit: () => {
+                    modal.close();
+                },
+            },
+        ],
+    });
+    
+    await modal.closed;
+    
+    // Apply the rename if the title changed
+    if (newTitle && newTitle !== note.title) {
+        note.title = newTitle;
+        await api.v1.storage.set("notes", notes);
+        await updateNotesPanel();
+        
+        const windowHandle = openWindows.get(note.id);
+        if (windowHandle) {
+            windowHandle.update({ title: newTitle });
+        }
+    }
+}
+
+// Update the notes panel UI
+async function updateNotesPanel(notesToShow?: Note[]): Promise<void> {
+    const displayNotes = notesToShow || notes;
+    
+    const notesList: UIPart[] = displayNotes.map((note) => ({
+        type: "box",
+        content: [
+            {
+                type: "text",
+                text: note.title,
+                style: { flex: 1, fontSize: "14px" },
+            },
+            {
+                type: "row",
+                spacing: "space-between",
+                alignment: "center",
+                content: [
+                    {
+                        type: "button",
+                        text: "Open",
+                        callback: () => openNote(note.id),
+                    },
+                    {
+                        type: "button",
+                        text: "Rename",
+                        callback: () => initiateRename(note),
+                    },
+                    {
+                        type: "button",
+                        text: "Delete",
+                        callback: () => deleteNote(note.id),
+                    },
+                ],
+                style: {},
+            },
+        ],
+        style: {
+            flex: "1 1 200px",
+            display: "flex",
+            flexDirection: "column",
+            minWidth: "200px",
+            margin: 0,
+        },
+    }));
+
+    const panelContent: UIPart[] = [
+        {
+            type: "row",
+            content: [
+                {
+                    type: "button",
+                    text: "+ New Note",
+                    callback: createNote,
+                    style: {},
+                },
+                {
+                    type: "textInput",
+                    placeholder: "Search notes...",
+                    onChange: (value) => {
+                        if (!value) {
+                            updateNotesPanel();
+                            return;
+                        }
+                        api.v1.log("Searching notes for:", value);
+                        const filteredNotes = notes.filter((note) =>
+                            note.title.toLowerCase().includes(value.toLowerCase())
+                        );
+                        api.v1.log("Filtered notes:", filteredNotes);
+                        updateNotesPanel(filteredNotes);
+                    },
+                },
+            ],
+        },
+    ];
+
+    if (notesList.length > 0) {
+        panelContent.push({
+            type: "container",
+            style: { overflowY: "auto", flex: 1 },
+            content: [
+                {
+                    type: "container",
+                    content: notesList,
+                    style: {
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                        gap: "10px",
+                        marginBottom: "10px",
+                    },
+                },
+            ],
+        });
+    } else {
+        panelContent.push({
+            type: "text",
+            text: "No notes.",
+            style: {
+                fontStyle: "italic",
+                textAlign: "center",
+                marginTop: "20px",
+            },
+        });
+    }
+
+    await api.v1.ui.register([
+        {
+            type: "scriptPanel",
+            id: "notesPanel",
+            name: "Notes",
+            iconId: "file-text",
+            content: [
+                {
+                    type: "container",
+                    content: panelContent,
+                    style: {
+                        height: "300px",
+                        width: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                    },
+                },
+            ],
+        },
+    ]);
+}
+
+(async () => {
+    // Register the initial panel
+    await api.v1.ui.register([
+        {
+            type: "scriptPanel",
+            id: "notesPanel",
+            name: "Notes",
+            iconId: "file-text",
+            content: [],
+        },
+    ]);
+
+    // Load config values with defaults
+    openOnCreate = (await api.v1.config.get("open_on_create")) ?? true;
+    renameOnCreate = (await api.v1.config.get("rename_on_create")) ?? false;
+
+    // Initialize the notes system
+    await init();
+
+    api.v1.log("Notes panel initialized successfully!");
+})();

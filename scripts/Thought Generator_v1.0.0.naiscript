@@ -1,0 +1,456 @@
+/*---
+compatibilityVersion: naiscript-1.0
+id: thought-generator-001
+name: Thought Generator
+createdAt: 1735689600000
+updatedAt: 1764240553021
+version: 1.0.0
+author: Zaltys
+description: Generates character's internal thoughts based on the latest story content. Uses character profile (personality, goals, background) to create context-aware, first-person mental monologue.
+memoryLimit: 8
+---*/
+// Thought Generator v1.0.0 - Generate character thoughts based on latest story content
+// Uses character info to create context-aware internal monologue/thoughts
+
+let isProcessing = false;
+let statusMessage = "";
+let lastGeneratedThoughts = "";
+
+// Character info
+let charName = "";
+let charType = "Character (protagonist)";
+let charGender = "";
+let charPersonality = "";
+let charBackground = "";
+let charGoals = "";
+let isProtagonist = true; // true = protagonist thoughts, false = observer commentary
+
+// Build character block for AI context
+function buildCharacterBlock(): string {
+  if (!charName) return "";
+
+  let block = `----
+${charName}
+Type: ${charType}
+Gender: ${charGender || "Unspecified"}
+Personality: ${charPersonality || "Not specified"}`;
+
+  // Only include goals for protagonist mode
+  if (isProtagonist) {
+    block += `\nCurrent goals: ${charGoals || "Not specified"}`;
+  }
+
+  block += `\nBackground: ${charBackground || "Not specified"}`;
+
+  return block;
+}
+
+// Build AI prompt for thought generation
+function buildThoughtPrompt(storyContext: string): string {
+  const characterBlock = buildCharacterBlock();
+  const characterNote = characterBlock ? `\n\nCHARACTER PROFILE:\n${characterBlock}\n` : '';
+
+  if (isProtagonist) {
+    return `You are experiencing events directly through a character's mind. Write their immediate, raw mental reactions.
+
+STORY CONTEXT (latest events):
+${storyContext}${characterNote}
+
+Write 2-4 sentences capturing their unfiltered stream of consciousness in first person, present tense. DO NOT describe or analyze their feelings - BE the feelings.
+
+CRITICAL - AVOID THESE "TELL" PATTERNS:
+❌ "I feel scared" → ✓ "God, what was that sound?"
+❌ "I'm confused" → ✓ "What? That doesn't make sense."
+❌ "I notice X" → ✓ "X. There. Shit."
+❌ "I am hurt" → ✓ "Pain. Everything hurts."
+❌ "I wonder if..." → ✓ "Is it...? Could be."
+
+STYLE RULES:
+- Write reactions, not observations about reactions
+- Use their actual mental voice - fragments, swearing, whatever fits
+- Match mental clarity to situation: panicked = fragments; calm = complete thoughts
+- NO analysis or self-commentary - just immediate experience
+
+THOUGHTS:`;
+  } else {
+    return `You are a character observing and commenting on the story events. React to what's happening from your perspective as an observer.
+
+STORY CONTEXT (latest events):
+${storyContext}${characterNote}
+
+Write 2-4 sentences of commentary in first person ("I"), present tense. React to the events with your personality - your opinions, judgments, observations about what's unfolding.
+
+IMPORTANT RULES:
+- NO quotation marks, italics, or special formatting - just plain commentary
+- Match their personality and attitude - sarcastic, analytical, amused, critical, whatever fits them
+- You're watching this unfold, not living it - comment on what you're seeing
+- Be authentic to who THEY are and how they'd react to these events
+
+COMMENTARY:`;
+  }
+}
+
+// Generate thoughts
+async function generateThoughts() {
+  if (isProcessing) {
+    statusMessage = "Already generating...";
+    await updatePanel();
+    return;
+  }
+  
+  try {
+    isProcessing = true;
+    statusMessage = "Reading story content...";
+    await updatePanel();
+    
+    // Get the full document text
+    const sections = await api.v1.document.scan();
+    const fullText = sections.map(s => s.section.text).join('\n');
+    
+    if (!fullText || fullText.trim().length === 0) {
+      throw new Error("No story content found");
+    }
+    
+    api.v1.log(`📄 Document has ${fullText.length} characters`);
+    
+    // Get last 2000 characters as context
+    const contextLength = 2000;
+    const storyContext = fullText.slice(-contextLength);
+
+    api.v1.log(`📝 Using last ${storyContext.length} characters as context`);
+    api.v1.log("=== STORY CONTEXT BEING SENT ===");
+    api.v1.log(storyContext);
+    api.v1.log("=== END STORY CONTEXT ===");
+
+    // Log character block if present
+    const charBlock = buildCharacterBlock();
+    if (charBlock) {
+      api.v1.log("👤 Character info:", charBlock);
+    } else {
+      api.v1.log("⚠️ No character info provided - thoughts will be generic");
+    }
+
+    // Build AI prompt
+    const prompt = buildThoughtPrompt(storyContext);
+
+    api.v1.log("=== FULL PROMPT BEING SENT TO AI ===");
+    api.v1.log(prompt);
+    api.v1.log("=== END PROMPT ===");
+    
+    statusMessage = "Generating character thoughts...";
+    await updatePanel();
+    
+    // Generate with AI
+    const genParams = await api.v1.generationParameters.get();
+    const response = await api.v1.generate(
+      [{ role: "user", content: prompt }],
+      {
+        model: genParams.model,
+        max_tokens: 150,
+        temperature: genParams.temperature
+      },
+      undefined,
+      "background"
+    );
+    
+    if (!response.choices || response.choices.length === 0) {
+      throw new Error("No response from AI");
+    }
+    
+    const thoughts = response.choices[0].text.trim();
+    api.v1.log("💭 Generated thoughts:", thoughts);
+    
+    lastGeneratedThoughts = thoughts;
+    statusMessage = "✅ Thoughts generated successfully!";
+    await updatePanel();
+    
+  } catch (error: any) {
+    api.v1.error("Error generating thoughts:", error);
+    statusMessage = `❌ Error: ${error.message || error}`;
+  } finally {
+    isProcessing = false;
+    await updatePanel();
+  }
+}
+
+// Update UI panel
+async function updatePanel() {
+  // Build script panel content (controls and character info)
+  const scriptContent: UIPart[] = [];
+
+  scriptContent.push(
+    {
+      type: "text",
+      text: "**Thought Generator**",
+      markdown: true,
+      style: { marginBottom: "8px", fontSize: "16px", fontWeight: "bold" }
+    },
+    {
+      type: "text",
+      text: "Generate character's internal thoughts based on the latest story content.",
+      style: { marginBottom: "12px", fontSize: "13px", opacity: 0.8 }
+    }
+  );
+
+  // Character info section
+  scriptContent.push(
+    {
+      type: "text",
+      text: "**Character Info**",
+      markdown: true,
+      style: { marginBottom: "6px", fontSize: "14px", fontWeight: "bold" }
+    },
+    {
+      type: "checkboxInput",
+      label: "Protagonist (uncheck for observer/commentator)",
+      initialValue: isProtagonist,
+      storageKey: "story:thoughtGen_isProtagonist",
+      onChange: async (value: boolean) => {
+        isProtagonist = value;
+        await api.v1.storyStorage.set("thoughtGen_isProtagonist", value);
+        await updatePanel(); // Refresh to update Goals field state
+      },
+      style: { marginBottom: "8px", fontSize: "12px" }
+    },
+    {
+      type: "textInput",
+      placeholder: "Name",
+      initialValue: charName,
+      storageKey: "story:char_name",
+      onChange: async (value: string) => {
+        charName = value;
+        await api.v1.storyStorage.set("char_name", value);
+      },
+      style: { marginBottom: "4px", fontSize: "12px" }
+    },
+    {
+      type: "row",
+      spacing: "start",
+      style: { marginBottom: "4px" },
+      content: [
+        {
+          type: "textInput",
+          placeholder: "Type",
+          initialValue: charType,
+          storageKey: "story:char_type",
+          onChange: async (value: string) => {
+            charType = value;
+            await api.v1.storyStorage.set("char_type", value);
+          },
+          style: { fontSize: "12px", flex: 1, marginRight: "4px" }
+        },
+        {
+          type: "textInput",
+          placeholder: "Gender",
+          initialValue: charGender,
+          storageKey: "story:char_gender",
+          onChange: async (value: string) => {
+            charGender = value;
+            await api.v1.storyStorage.set("char_gender", value);
+          },
+          style: { fontSize: "12px", flex: 1 }
+        }
+      ]
+    },
+    {
+      type: "textInput",
+      placeholder: "Personality (comma-separated)",
+      initialValue: charPersonality,
+      storageKey: "story:char_personality",
+      onChange: async (value: string) => {
+        charPersonality = value;
+        await api.v1.storyStorage.set("char_personality", value);
+      },
+      style: { marginBottom: "4px", fontSize: "12px" }
+    },
+    {
+      type: "textInput",
+      placeholder: isProtagonist ? "Current goals (comma-separated)" : "Goals (inactive in observer mode)",
+      initialValue: charGoals,
+      storageKey: "story:char_goals",
+      onChange: isProtagonist ? async (value: string) => {
+        charGoals = value;
+        await api.v1.storyStorage.set("char_goals", value);
+      } : undefined,
+      style: {
+        marginBottom: "4px",
+        fontSize: "12px",
+        opacity: isProtagonist ? 1 : 0.5,
+        pointerEvents: isProtagonist ? "auto" : "none"
+      }
+    },
+    {
+      type: "textInput",
+      placeholder: "Background (comma-separated)",
+      initialValue: charBackground,
+      storageKey: "story:char_background",
+      onChange: async (value: string) => {
+        charBackground = value;
+        await api.v1.storyStorage.set("char_background", value);
+      },
+      style: { marginBottom: "12px", fontSize: "12px" }
+    }
+  );
+
+  // Status message
+  if (statusMessage) {
+    scriptContent.push({
+      type: "text",
+      text: statusMessage,
+      style: {
+        padding: "10px",
+        backgroundColor: statusMessage.includes('✅')
+          ? "rgba(107, 255, 159, 0.15)"
+          : statusMessage.includes('❌')
+          ? "rgba(255, 107, 107, 0.15)"
+          : "rgba(107, 159, 255, 0.15)",
+        borderRadius: "4px",
+        marginBottom: "15px",
+        border: statusMessage.includes('✅')
+          ? "1px solid rgba(107, 255, 159, 0.3)"
+          : statusMessage.includes('❌')
+          ? "1px solid rgba(255, 107, 107, 0.3)"
+          : "1px solid rgba(107, 159, 255, 0.3)"
+      }
+    });
+  }
+
+  // Generate button
+  scriptContent.push({
+    type: "button",
+    text: "Generate Thoughts",
+    disabled: isProcessing,
+    callback: async () => {
+      await generateThoughts();
+    },
+    style: { width: "100%", marginBottom: "12px" }
+  });
+
+  scriptContent.push({
+    type: "text",
+    text: "💡 **Tip:** Fill in character info for more accurate, personality-driven thoughts. Click 'Generate Thoughts' after significant story events.",
+    markdown: true,
+    style: { fontSize: "12px", opacity: 0.7, fontStyle: "italic" }
+  });
+
+  // Build sidebar content (thoughts display)
+  const sidebarContent: UIPart[] = [];
+
+  if (lastGeneratedThoughts) {
+    const titleSuffix = isProtagonist ? "Thoughts" : "Commentary";
+    sidebarContent.push(
+      {
+        type: "text",
+        text: charName ? `**${charName}'s ${titleSuffix}**` : `**Character ${titleSuffix}**`,
+        markdown: true,
+        style: { marginBottom: "12px", fontSize: "16px", fontWeight: "bold" }
+      },
+      {
+        type: "text",
+        text: lastGeneratedThoughts,
+        style: {
+          fontSize: "14px",
+          fontStyle: "italic",
+          lineHeight: "1.7",
+          whiteSpace: "pre-wrap"
+        }
+      }
+    );
+  } else {
+    sidebarContent.push({
+      type: "text",
+      text: "No thoughts generated yet. Click 'Generate Thoughts' in the script panel to create character thoughts based on your story.",
+      style: {
+        fontSize: "14px",
+        opacity: 0.7,
+        fontStyle: "italic",
+        textAlign: "center",
+        padding: "20px"
+      }
+    });
+  }
+
+  // Update both panels
+  await api.v1.ui.update([
+    {
+      type: "scriptPanel",
+      id: "thoughtGeneratorPanel",
+      name: "Thought Generator",
+      content: [{
+        type: "container",
+        style: {
+          padding: "12px",
+          height: "100%",
+          overflowY: "auto"
+        },
+        content: scriptContent
+      }]
+    },
+    {
+      type: "sidebarPanel",
+      id: "thoughtGeneratorSidebar",
+      name: isProtagonist ? "Character Thoughts" : "Character Commentary",
+      content: [{
+        type: "container",
+        style: {
+          padding: "16px",
+          height: "100%",
+          overflowY: "auto"
+        },
+        content: sidebarContent
+      }]
+    }
+  ]);
+}
+
+// Hook: Auto-generate thoughts after generation completes
+async function onGenerationEnd(params: any): Promise<void> {
+  api.v1.log("🎯 onGenerationEnd hook triggered!");
+  api.v1.log("Hook params:", params);
+  api.v1.log("isProcessing:", isProcessing);
+
+  // Small delay to ensure document is fully updated
+  api.v1.timers.setTimeout(async () => {
+    api.v1.log("⏰ Delay complete, calling generateThoughts()");
+    await generateThoughts();
+  }, 500);
+}
+
+// Initialize
+(async () => {
+  // Load stored character data
+  charName = (await api.v1.storyStorage.get("char_name")) || "";
+  charType = (await api.v1.storyStorage.get("char_type")) || "Character (protagonist)";
+  charGender = (await api.v1.storyStorage.get("char_gender")) || "";
+  charPersonality = (await api.v1.storyStorage.get("char_personality")) || "";
+  charGoals = (await api.v1.storyStorage.get("char_goals")) || "";
+  charBackground = (await api.v1.storyStorage.get("char_background")) || "";
+  const storedIsProtagonist = await api.v1.storyStorage.get("thoughtGen_isProtagonist");
+  isProtagonist = storedIsProtagonist !== null ? storedIsProtagonist : true;
+
+  // Register hook for auto-generation
+  api.v1.hooks.register("onGenerationEnd", onGenerationEnd);
+  api.v1.log("✅ Registered onGenerationEnd hook");
+
+  // Register UI - both script panel (controls) and sidebar panel (thoughts display)
+  await api.v1.ui.register([
+    {
+      type: "scriptPanel",
+      id: "thoughtGeneratorPanel",
+      name: "Thought Generator",
+      iconId: "user",
+      content: []
+    },
+    {
+      type: "sidebarPanel",
+      id: "thoughtGeneratorSidebar",
+      name: isProtagonist ? "Character Thoughts" : "Character Commentary",
+      iconId: "user",
+      content: []
+    }
+  ]);
+
+  await updatePanel();
+
+  api.v1.log("Thought Generator v1.0.0 initialized");
+})();

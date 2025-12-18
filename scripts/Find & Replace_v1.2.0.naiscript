@@ -1,0 +1,163 @@
+/*---
+compatibilityVersion: naiscript-1.0
+id: c1ad7bd9-766f-4464-861f-1801f0d540b9
+name: Find & Replace
+createdAt: 1760443654594
+updatedAt: 1766042119144
+version: 1.2.0
+author: ght901
+description: This script adds a panel with a simple find and replace tool.
+memoryLimit: 8
+---*/
+// Find and Replace Script
+async function performFindReplace(find: string, replace: string) {
+  if (!(await api.v1.permissions.request('documentEdit'))) {
+    api.v1.ui.toast("Permission is required to find and replace.")
+    return
+  }
+
+  if (!find) {
+    return "Please enter text to find";
+  }
+
+  let replacementCount = 0;
+  const sections = await api.v1.document.scan();
+  const newSections = [];
+
+  for (const { sectionId, section } of sections) {
+    const originalText = section.text;
+    const newText = originalText.replace(new RegExp(find, "g"), replace);
+    const newOrigin = [];
+    const newFormatting = [];
+    if (originalText !== newText) {
+      // Update the origin and formatting to reflect the change
+      // origin: [{ position: number, length: number, data: number }]
+      // formatting: [{ position: number, length: number, data: object }]
+      // We need to extend the origin and formatting arrays to cover the new text length
+      let matches = originalText.match(new RegExp(find, "g"));
+      let offset = 0;
+      if (matches) {
+        let origins = section.origin || [];
+        let formatting = section.formatting || [];
+        api.v1.log(matches);
+        for (let match of [...matches].reverse()) {
+          const startIndex = originalText.indexOf(match, offset);
+          const endIndex = startIndex + match.length;
+          offset = endIndex;
+          function updatePositions<T>(arr: {
+            position: number;
+            length: number;
+            data: T;
+          }[]) {
+            let positionsAfter = arr.filter((o) => o.position >= endIndex);
+            let positionsInBetween = arr.filter(
+              (o) => o.position < endIndex && o.position + o.length > startIndex
+            );
+            let positionsBefore = arr.filter(
+              (o) => o.position + o.length <= startIndex
+            );
+            api.v1.log(positionsAfter, positionsInBetween, positionsBefore);
+            // After get their position shifted by the difference in length
+            // In between get their length extended by the difference in length
+            // Before remain unchanged
+            const lengthDiff = replace.length - match.length;
+            positionsAfter = positionsAfter.map((o) => ({
+              ...o,
+              position: o.position + lengthDiff,
+            }));
+            positionsInBetween = positionsInBetween.map((o) => ({
+              ...o,
+              length: o.length + lengthDiff,
+            }));
+            return [
+              ...positionsBefore,
+              ...positionsInBetween,
+              ...positionsAfter,
+            ];
+          }
+          api.v1.log("Before update:", origins, formatting);
+          origins = updatePositions(origins);
+          formatting = updatePositions(formatting);
+          newOrigin.push(...origins);
+          newFormatting.push(...formatting);
+        }
+      }
+      newSections.push({
+        sectionId,
+        section: {
+          text: newText,
+          origin: newOrigin.length > 0 ? newOrigin : section.origin,
+          formatting:
+            newFormatting.length > 0 ? newFormatting : section.formatting,
+        }
+      });
+
+      // Count how many replacements were made in this section
+      replacementCount += (originalText.match(new RegExp(find, "g")) || [])
+        .length;
+    }
+  }
+  api.v1.log(newSections);
+
+  if (newSections.length > 0) {
+    await api.v1.document.updateParagraphs(newSections);
+  }
+
+  return replacementCount > 0
+    ? `Replaced ${replacementCount} occurrence${replacementCount !== 1 ? "s" : ""
+    }`
+    : "No matches found";
+}
+
+api.v1.ui.register([
+  {
+    type: "scriptPanel",
+    id: "findReplacePanel",
+    name: "Find & Replace",
+    content: [
+      {
+        type: "column",
+        style: { alignItems: "stretch" },
+        content: [
+          {
+            type: "textInput",
+            id: "findInput",
+            label: "Find:",
+            placeholder: "Text to find",
+            storageKey: "findText",
+          },
+          {
+            type: "textInput",
+            id: "replaceInput",
+            label: "Replace with:",
+            placeholder: "Replacement text",
+            storageKey: "replaceText",
+          },
+          {
+            type: "button",
+            text: "Replace All",
+            callback: async () => {
+              const find = await api.v1.storage.get("findText");
+              const replace = await api.v1.storage.get("replaceText");
+
+              const result = await performFindReplace(find, replace);
+
+              await api.v1.ui.updateParts([
+                {
+                  type: "text",
+                  id: "resultText",
+                  text: result,
+                },
+              ]);
+            },
+          },
+          {
+            type: "text",
+            id: "resultText",
+            text: "{{resultsMessage}}",
+          },
+        ],
+      },
+    ],
+  },
+]);

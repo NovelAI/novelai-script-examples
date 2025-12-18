@@ -1,0 +1,323 @@
+/*---
+compatibilityVersion: naiscript-1.0
+id: smart-summarizer-001
+name: Smart Summarizer
+createdAt: 1737244800000
+updatedAt: 1764350370241
+version: 0.8.0
+author: Zaltys
+description: Generates summaries of selected text with configurable length and style. Right-click selected text and choose 'Summarize Selection' from the ☰ menu.
+memoryLimit: 8
+config:
+  - name: summary_length
+    prettyName: Summary Length
+    type: enum
+    default: moderate
+    options:
+      - label: Brief (1-2 sentences)
+        value: brief
+      - label: Moderate (2-4 sentences)
+        value: moderate
+      - label: Detailed (full summary)
+        value: detailed
+    description: "Controls summary length. Brief: 1-2 sentences, Moderate: 2-4 sentences, Detailed: full comprehensive summary."
+  - name: summary_style
+    prettyName: Summary Style
+    type: enum
+    default: prose
+    options:
+      - label: Prose (flowing text)
+        value: prose
+      - label: Bullet Points
+        value: bullets
+      - label: Key Points
+        value: keypoints
+    description: "Output format. Prose: flowing narrative text, Bullets: markdown bullet list, Key Points: structured list of main ideas."
+---*/
+// Smart Summarizer - Generate summaries of selected text with configurable styles
+
+let summaryLength: "brief" | "moderate" | "detailed";
+let summaryStyle: "prose" | "bullets" | "keypoints";
+
+/**
+ * Generate a summary of the selected text
+ */
+async function summarizeSelection(selection: DocumentSelection): Promise<void> {
+  // Extract the selected text
+  const selectedText = await api.v1.document.textFromSelection(selection);
+
+  if (!selectedText || selectedText.trim().length === 0) {
+    const errorWindow = await api.v1.ui.window.open({
+      title: "No Selection",
+      content: [{
+        type: "text",
+        text: "No text selected. Please select some text to summarize."
+      }]
+    });
+    return;
+  }
+
+  // Build the summarization prompt based on config
+  const lengthInstructions = {
+    brief: "Keep the summary very brief (1-2 sentences).",
+    moderate: "Provide a moderate summary (2-4 sentences).",
+    detailed: "Provide a detailed summary with key points."
+  };
+
+  const styleInstructions = {
+    prose: "Write the summary as flowing prose.",
+    bullets: "Format the summary as bullet points.",
+    keypoints: "Extract and list the key points in a clear format."
+  };
+
+  const lengthInstruction = lengthInstructions[summaryLength] || lengthInstructions.moderate;
+  const styleInstruction = styleInstructions[summaryStyle] || styleInstructions.prose;
+
+  const systemPrompt = `You are a helpful summarization assistant. ${lengthInstruction} ${styleInstruction}`;
+  
+  const userPrompt = `Please summarize the following text:\n\n${selectedText}`;
+
+  // --- Window and State Initialization ---
+  const summaryWindow = await api.v1.ui.window.open({
+    title: "Generating Summary...",
+    defaultWidth: 600,
+    defaultHeight: 400,
+    resizable: true,
+    content: []
+  });
+
+  const startTime = Date.now();
+  let isGenerating = true;
+  let timerId: number | undefined = undefined;
+  let accumulatedSummary = "";
+
+  /**
+   * Render the window content based on current state
+   */
+  const renderWindow = (state: 'generating' | 'success' | 'error', error: Error | null = null) => {
+    const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+    let content: UIPart[] = [];
+
+    switch (state) {
+      case 'generating':
+        content = [
+          {
+            type: "text",
+            text: `Generating summary... [${elapsedSeconds}s]`,
+            markdown: false
+          },
+          {
+            type: "box",
+            content: [
+              {
+                type: "text",
+                text: accumulatedSummary || "Waiting for response...",
+                markdown: summaryStyle === 'bullets',
+                style: { 
+                  marginTop: '10px',
+                  whiteSpace: 'pre-wrap',
+                  padding: '10px',
+                  minHeight: '100px'
+                }
+              }
+            ],
+            style: { marginTop: '10px' }
+          },
+          {
+            type: "button",
+            text: "Close",
+            callback: () => summaryWindow.close(),
+            style: { alignSelf: "flex-end", marginTop: "15px" }
+          }
+        ];
+        break;
+
+      case 'success':
+        content = [
+          {
+            type: "text",
+            text: "Summary:",
+            style: { fontWeight: "bold", marginBottom: "10px" }
+          },
+          {
+            type: "box",
+            content: [
+              {
+                type: "text",
+                text: accumulatedSummary.trim(),
+                markdown: summaryStyle === 'bullets',
+                style: { 
+                  whiteSpace: 'pre-wrap',
+                  padding: '10px'
+                }
+              }
+            ],
+            style: { marginBottom: '10px' }
+          },
+          {
+            type: "text",
+            text: `Generated in ${elapsedSeconds} seconds`,
+            markdown: false,
+            style: { fontStyle: "italic", color: "grey", marginBottom: "10px" }
+          },
+          {
+            type: "row",
+            spacing: "space-between",
+            content: [
+              {
+                type: "button",
+                text: "Copy to Clipboard",
+                callback: async () => {
+                  try {
+                    const hasPermission = await api.v1.permissions.has("clipboardWrite");
+                    if (!hasPermission) {
+                      const granted = await api.v1.permissions.request("clipboardWrite");
+                      if (!granted) {
+                        api.v1.error("Clipboard permission denied");
+                        return;
+                      }
+                    }
+                    await api.v1.clipboard.writeText(accumulatedSummary.trim());
+                    api.v1.log("Summary copied to clipboard!");
+                  } catch (err) {
+                    api.v1.error("Failed to copy to clipboard:", err);
+                  }
+                }
+              },
+              {
+                type: "button",
+                text: "Insert at Cursor",
+                callback: async () => {
+                  try {
+                    await api.v1.document.append("\n\n" + accumulatedSummary.trim());
+                    summaryWindow.close();
+                  } catch (err) {
+                    api.v1.error("Failed to insert summary:", err);
+                  }
+                }
+              },
+              {
+                type: "button",
+                text: "Close",
+                callback: () => summaryWindow.close()
+              }
+            ]
+          }
+        ];
+        summaryWindow.update({ title: "Summary Complete" });
+        break;
+
+      case 'error':
+        content = [
+          {
+            type: "text",
+            text: `Failed to generate summary.\n\nError: ${error?.message || error}`,
+            markdown: false
+          },
+          {
+            type: "button",
+            text: "Close",
+            callback: () => summaryWindow.close(),
+            style: { alignSelf: "flex-end", marginTop: "15px" }
+          }
+        ];
+        summaryWindow.update({ title: "Error" });
+        break;
+    }
+
+    summaryWindow.update({
+      content: [{ 
+        type: "column", 
+        content: content,
+        style: { height: "100%", padding: "10px" }
+      }]
+    });
+  };
+
+  // --- Timer Management ---
+  const updateTimer = async () => {
+    if (!isGenerating) return;
+    renderWindow('generating');
+    timerId = await api.v1.timers.setTimeout(updateTimer, 1000);
+  };
+
+  // Start timer
+  updateTimer();
+
+  // Handle window close
+  summaryWindow.closed.then(() => {
+    isGenerating = false;
+    if (timerId) {
+      api.v1.timers.clearTimeout(timerId);
+    }
+  });
+
+  // --- Generation Logic ---
+  const messages = [
+    { role: "system" as const, content: systemPrompt },
+    { role: "user" as const, content: userPrompt }
+  ];
+
+  // Set max_tokens based on summary length to prevent cutoff
+  const maxTokensForLength = {
+    brief: 100,
+    moderate: 250,
+    detailed: 500
+  };
+  const maxTokens = maxTokensForLength[summaryLength] || maxTokensForLength.moderate;
+
+  const params = await api.v1.generationParameters.get();
+  // Override max_tokens to ensure summary completes
+  params.max_tokens = maxTokens;
+
+  try {
+    renderWindow('generating');
+    
+    await api.v1.generate(
+      messages,
+      params,
+      (data, final) => {
+        if (!final) {
+          accumulatedSummary += data[0].text;
+          renderWindow('generating');
+        } else {
+          isGenerating = false;
+          if (timerId !== undefined) {
+           api.v1.timers.clearTimeout(timerId);
+         }
+    renderWindow('success');
+  }
+      },
+      "background"
+    );
+  } catch (error) {
+    isGenerating = false;
+    if (timerId !== undefined) {
+      api.v1.timers.clearTimeout(timerId);
+    }
+    api.v1.error("Failed to generate summary:", error);
+    renderWindow('error', error as Error);
+  }
+}
+
+// Initialize the script
+(async () => {
+  // Load config values
+  summaryLength = (await api.v1.config.get("summary_length")) || "moderate";
+  summaryStyle = (await api.v1.config.get("summary_style")) || "prose";
+
+  // Register context menu button
+  await api.v1.ui.register([
+    {
+      type: "contextMenuButton",
+      id: "smartSummarizerButton",
+      text: "Summarize Selection",
+      callback: ({ selection }) => {
+        return summarizeSelection(selection);
+      }
+    }
+  ]);
+
+  api.v1.log("Smart Summarizer loaded successfully!");
+  api.v1.log(`Config: Length=${summaryLength}, Style=${summaryStyle}`);
+})();

@@ -1,0 +1,335 @@
+/*---
+compatibilityVersion: naiscript-1.0
+id: e4d5bae4-7391-47a2-a239-8223ba584d86
+name: Retry Harder
+createdAt: 1762798774582
+updatedAt: 1766057709630
+version: 1.3.0
+author: Sonnet 4.5 ft. finetune
+description: This script builds a special context for retrying that includes recent retries to let the model come up with a new direction.
+memoryLimit: 8
+---*/
+// Retry Harder - Generate more diverse alternatives
+// State tracking
+let isRetryHarder = false;
+let retryHarderData: {
+  tries: { text: string; truncated: boolean }[];
+  prefill: string;
+} | null = null;
+
+// Hook: Modify context before generation
+const onContextBuilt: OnContextBuilt = (params) => {
+  if (!isRetryHarder || !retryHarderData) {
+    return;
+  }
+  
+  try {
+    const { messages } = params;
+    
+    // Build <previous_try> blocks (all end with [...], newlines doubled for readability)
+    const triesText = retryHarderData.tries
+      .map(t => `<previous_try>${t.text.replace(/\n/g, '\n\n')} [...]</previous_try>`)
+      .join('\n\n');
+    
+    // Build instruction as a new user message
+    const retryHarderMessage = `${triesText}
+
+The [...] means that the content of <previous_try></previous_try> was truncated for brevity.
+
+You have previously output the above continuation(s) inside the <previous_try></previous_try> tags. I would like the story to take a very different path. Please try again and go in a different direction. Continue seamlessly where you left off (exactly like the previous continuations).
+
+IMPORTANT: Repeat the beginning of the line or previous paragraph. After that, generate a new, very different version of the section(s) inside the <previous_try></previous_try> tags, plus a short confirmation that you understand your task at the start.`;
+    
+    // Add new user message with retry harder instructions
+    messages.push({
+      role: 'user',
+      content: retryHarderMessage
+    });
+    
+    // Add assistant prefill with instructions and context
+    const assistantPrefill = `Understood. I will:
+- Continue in the exact established voice, tone, and style
+- Maintain all character consistencies and ongoing plot threads  
+- Develop the narrative at natural pace without rushing toward conclusions
+- Stay fully immersed in the story world without meta-commentary
+- Match the linguistic patterns, vocabulary, and rhythm already present
+- NEVER output [...], just keep writing
+- Take the result in a fresh direction
+- Generate a new and different version of the section inside the <previous_try></previous_try> tags
+
+[Of course, here you go:]
+
+${retryHarderData.prefill}`;
+    
+    messages.push({
+      role: 'assistant',
+      content: assistantPrefill
+    });
+    
+    return { messages };
+    
+  } finally {
+    // Reset state after context is built
+    isRetryHarder = false;
+    retryHarderData = null;
+  }
+};
+
+// Hook: Clean up response
+const onResponse: OnResponse = (params) => {
+  const { text } = params;
+  
+  // Process every batch, not just final (since text contains incremental tokens)
+  // The marker " [...]" (with leading space) is a single token, so we can catch it
+  const cleanedText = text.map(t => t.replace(/\s*\[\.\.\.\]\s*/g, ''));
+  
+  // Only return if we actually changed something
+  const hasChanges = cleanedText.some((cleaned, i) => cleaned !== text[i]);
+  if (hasChanges) {
+    return { text: cleanedText };
+  }
+};
+
+function extractGeneratedText(nodeState: HistoryNodeState) {
+  const textParts: string[] = [];
+  
+  // Extract text from forward changes (what was added)
+  for (const changeMap of nodeState.forwardChanges) {
+    for (const [sectionId, change] of changeMap) {
+      if (change.type === 'create') {
+        textParts.push(change.section.text);
+      } else if (change.type === 'update') {
+        // Extract inserted text from diff
+        for (const part of change.diff.parts) {
+          if (part.insert) {
+            textParts.push(part.insert);
+          }
+        }
+      }
+    }
+  }
+  
+  // Join with newlines to preserve paragraph breaks
+  return textParts.join('\n');
+}
+
+async function getPrefillContext(parentState: HistoryNodeState) {
+  // Get the generation position from the parent node
+  const genPosition = parentState.targetNode.genPosition;
+  if (!genPosition) {
+    // No generation position, just use end of last section
+    if (parentState.sections.length === 0) return '';
+    const lastSection = parentState.sections[parentState.sections.length - 1];
+    return lastSection.section.text;
+  }
+  
+  // Find the section where generation started
+  const genSection = parentState.sections.find(s => s.sectionId === genPosition.sectionId);
+  if (!genSection) return '';
+  
+  const sectionText = genSection.section.text;
+  const offset = genPosition.offset;
+  
+  // If offset is 0, use previous section as prefill
+  if (offset === 0) {
+    const sectionIndex = parentState.sections.findIndex(s => s.sectionId === genPosition.sectionId);
+    if (sectionIndex > 0) {
+      return parentState.sections[sectionIndex - 1].section.text;
+    }
+    return '';
+  }
+  
+  // Extract text up to the offset as prefill
+  return sectionText.substring(0, offset);
+}
+
+async function showErrorWindow(title: string, message: string) {
+  const win = await api.v1.ui.window.open({
+    title: title,
+    defaultWidth: 400,
+    defaultHeight: 200,
+    content: [
+      {
+        type: "text",
+        text: message,
+        style: { padding: "20px" }
+      },
+      {
+        type: "button",
+        text: "Close",
+        callback: async () => { await win.close(); },
+        style: { margin: "0 20px 20px 20px" }
+      }
+    ]
+  });
+}
+
+async function handleRetryHarder() {
+  try {
+    // Check if editor is blocked
+    const blocked = await api.v1.editor.isBlocked();
+    
+    if (blocked) {
+      await showErrorWindow("Retry Harder", "Editor is currently blocked. Please wait for the current operation to complete.");
+      return;
+    }
+    
+    // Get current history context
+    const parentNodeId = await api.v1.document.history.previousNodeId();
+    
+    if (!parentNodeId) {
+      await showErrorWindow("Retry Harder", "No previous generations found. Generate normally first, then use Retry Harder.");
+      return;
+    }
+    
+    // Get parent state to find siblings
+    const parentState = await api.v1.document.history.nodeState(parentNodeId);
+    if (!parentState) {
+      await showErrorWindow("Retry Harder", "Could not retrieve parent history state.");
+      return;
+    }
+    
+    const siblings = parentState.targetNode.children;
+    
+    if (siblings.length === 0) {
+      await showErrorWindow("Retry Harder", "No retry siblings found. Try retrying a few times first.");
+      return;
+    }
+    
+    // Get generation parameters
+    const genParams = await api.v1.generationParameters.get();
+    const model = genParams.model;
+    
+    // Collect and format sibling texts in one pass (newest first, stop when budget reached)
+    const formattedTries: { text: string; truncated: boolean }[] = [];
+    let totalTokens = 0;
+    const MAX_TOTAL_TOKENS = 1500;
+    const MAX_TOKENS_PER_TRY = 200;
+    
+    // Process in reverse to prioritize newest retries
+    for (let i = siblings.length - 1; i >= 0; i--) {
+      // Stop if we've hit the budget
+      if (totalTokens >= MAX_TOTAL_TOKENS) {
+        break;
+      }
+      
+      const siblingId = siblings[i];
+      const siblingState = await api.v1.document.history.nodeState(siblingId);
+      if (!siblingState) continue;
+      
+      const text = extractGeneratedText(siblingState);
+      if (!text.trim()) continue;
+      
+      // Encode to count tokens
+      const tokens = await api.v1.tokenizer.encode(text, model);
+      
+      let useText = text;
+      let tokenCount = tokens.length;
+      let wasTruncated = false;
+      
+      // Truncate if over per-try limit
+      if (tokenCount > MAX_TOKENS_PER_TRY) {
+        const truncatedTokens = tokens.slice(0, MAX_TOKENS_PER_TRY);
+        useText = await api.v1.tokenizer.decode(truncatedTokens, model);
+        tokenCount = MAX_TOKENS_PER_TRY;
+        wasTruncated = true;
+      }
+      
+      // Check if adding this would exceed total budget
+      if (totalTokens + tokenCount > MAX_TOTAL_TOKENS) {
+        break;
+      }
+      
+      totalTokens += tokenCount;
+      formattedTries.unshift({ // Add to front since processing backwards
+        text: useText,
+        truncated: wasTruncated
+      });
+    }
+    
+    // Get prefill context from parent node's generation position
+    const prefill = await getPrefillContext(parentState);
+    
+    // Build the retry harder additions to calculate token overhead
+    const triesText = formattedTries
+      .map(t => `<previous_try>${t.text.replace(/\n/g, '\n\n')} [...]</previous_try>`)
+      .join('\n\n');
+    
+    const retryHarderMessage = `${triesText}
+
+The [...] means that the content of <previous_try></previous_try> was truncated for brevity.
+
+You have previously output the above continuation(s) inside the <previous_try></previous_try> tags. I would like the story to take a very different path. Please try again and go in a different direction. Continue seamlessly where you left off (exactly like the previous continuations).
+
+IMPORTANT: Repeat the beginning of the line or previous paragraph. After that, generate a new, very different version of the section(s) inside the <previous_try></previous_try> tags, plus a short confirmation that you understand your task at the start.`;
+    
+    const assistantPrefill = `Understood. I will:
+- Continue in the exact established voice, tone, and style
+- Maintain all character consistencies and ongoing plot threads  
+- Develop the narrative at natural pace without rushing toward conclusions
+- Stay fully immersed in the story world without meta-commentary
+- Match the linguistic patterns, vocabulary, and rhythm already present
+- NEVER output [...], just keep writing
+- Take the result in a fresh direction
+- Generate a new and different version of the section inside the <previous_try></previous_try> tags
+
+[Of course, here you go:]
+
+${prefill}`;
+    
+    // Calculate token overhead for retry harder additions
+    const retryHarderTokens = await api.v1.tokenizer.encode(retryHarderMessage + assistantPrefill, model);
+    const tokenOverhead = retryHarderTokens.length + 10; // +10 for safety
+    
+    // Build context with reserved space for retry harder additions
+    await api.v1.buildContext({ contextLimitReduction: tokenOverhead, suppressScriptHooks: 'self' });
+    
+    // Store data for hooks
+    retryHarderData = {
+      tries: formattedTries,
+      prefill: prefill
+    };
+    isRetryHarder = true;
+    
+    // Undo to parent node so we retry from there instead of adding at the end
+    await api.v1.document.history.undo();
+    
+    // Trigger generation
+    await api.v1.editor.generate();
+    
+  } catch (error) {
+    api.v1.error("Error in Retry Harder:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Check for token limit related errors
+    if (errorMessage.toLowerCase().includes('token') || 
+        errorMessage.toLowerCase().includes('limit') || 
+        errorMessage.toLowerCase().includes('allowance') ||
+        errorMessage.toLowerCase().includes('quota')) {
+      await showErrorWindow("Retry Harder", "Generation token limit reached. Please wait a moment before trying again.");
+    } else {
+      await showErrorWindow("Retry Harder", `An error occurred: ${errorMessage}`);
+    }
+  }
+}
+
+// Initialize
+(async () => {
+  // Register hooks
+  api.v1.hooks.register('onContextBuilt', onContextBuilt);
+  api.v1.hooks.register('onResponse', onResponse);
+  
+  await api.v1.ui.register([
+    {
+      type: 'toolbarButton',
+      id: 'retryHarderButton',
+      text: 'Retry Harder',
+      iconId: 'refresh',
+      callback: async () => {
+        await handleRetryHarder();
+      }
+    }
+  ]);
+  
+  api.v1.log("Retry Harder script initialized");
+})();

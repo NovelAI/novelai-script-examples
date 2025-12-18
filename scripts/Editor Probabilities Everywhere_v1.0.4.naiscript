@@ -1,0 +1,285 @@
+/*---
+compatibilityVersion: naiscript-1.0
+id: 0199561d-147f-498f-935d-7746fc246b1b
+name: Editor Probabilities Everywhere
+createdAt: 1765679386302
+updatedAt: 1765687858383
+version: 1.0.4
+author: Cat Appreciator
+description: This script lets you select a word, click an option in the context menu, and see a list of alternatives for that word as if when using "Editor Probabilities" feature. When you click on an alternative, it replaces the original selection
+memoryLimit: 8
+---*/
+/**
+ * This script lets you select a word, click an option in the context menu,
+ * and see a list of alternatives for that word as if when using "Editor Probabilities" feature.
+ * When you click on an alternative, it replaces the original selection.
+ */
+
+
+/**
+ * This modal will show the word alternatives and let the user pick one.
+ * While generation is in progress, it will show a loading spinner, then populate the alternatives.
+ * If the user closes the modal while generation is in progress, the generation will be cancelled.
+ */
+async function openWordAlternativesModal(selection: DocumentSelection): Promise<void> {
+    const loadingTickerID = "word-alternatives-loading-ticker";
+    const alternativesContainerID = "word-alternatives-container";
+    const modal = await api.v1.ui.modal.open({
+        title: "Word Alternatives",
+        size: "small",
+        content: [
+            api.v1.ui.part.text({ // Will be continually updated
+                id: loadingTickerID,
+                markdown: true,
+                text: "*Loading alternatives*",
+            }),
+            api.v1.ui.part.container({ // Will be populated later
+                id: alternativesContainerID,
+                content: []
+            })
+        ]
+    })
+
+    // Start updating the loading ticker, stopping when generation is done, modal is closed, or generation is cancelled
+    let generationDone = false;
+    const cancelSignal = await api.v1.createCancellationSignal();
+    const shouldTickerStop = () => generationDone || cancelSignal.cancelled || modal.isClosed();
+    updateTickerUntilDone(loadingTickerID, shouldTickerStop);
+
+    // Automatically cancel generation when modal is closed
+    modal.closed.then(cancelSignal.cancel);
+
+    // Something may go wrong during generation - wrap in try-catch and print error if so
+    let alternatives: { text: string, probability: number }[] = [];
+    try {
+        const generation = await generateSingleTokenAtSelection(selection, cancelSignal);
+        // Extract alternatives from generation unless it's us who cancelled it
+        if (!cancelSignal.cancelled) {
+            alternatives = getAlternativesFromGeneration(generation);
+        }
+        generationDone = true;
+    } catch (e) {
+        generationDone = true;
+        // The alternatives container will not see much use if generation failed, so we repurpose it and the ticker to show the error
+        const stringifiedError = (e instanceof Error) ? e.message : JSON.stringify(e);
+        await api.v1.ui.updateParts([{
+            id: loadingTickerID,
+            text: "*Error while generating alternatives:*",
+        },
+        {
+            id: alternativesContainerID,
+            content: [
+                api.v1.ui.part.text({
+                    markdown: true,
+                    text: `\`\`\`\n${stringifiedError}\n\`\`\``,
+                })
+            ]
+        }
+        ]);
+        api.v1.error(stringifiedError);
+        return;
+    }
+
+    // Populates the alternatives container with buttons for each alternative
+    const alternativeButtons: UIPart[] = alternatives.map((alt) => createWordAlternativeButton(modal, selection, alt));
+    await api.v1.ui.updateParts([
+        {
+            id: loadingTickerID, // Ticker is no longer ticking, replace it with summary text
+            text: `*Found ${alternatives.length} alternatives, click on one to replace the selection:*`,
+        },
+        {
+            id: alternativesContainerID,
+            content: alternativeButtons
+        }
+    ]);
+}
+
+/**
+ * This function periodically updates "Loading alternatives" ticker with a different number of dots
+ * every half second, until doneFlag() returns true.
+ */
+async function updateTickerUntilDone(tickerID: string, doneFlag: () => boolean): Promise<void> {
+    let dotsCount = 0;
+    while (!doneFlag()) {
+        const loadingText = "*Loading alternatives" + ".".repeat(dotsCount % 4) + "*";
+        await api.v1.ui.updateParts([{ id: tickerID, text: loadingText }]);
+        await api.v1.timers.sleep(500);
+        dotsCount++;
+    }
+}
+
+/**
+ * Assembles context up to selection start and generates one token to get alternatives.
+ */
+async function generateSingleTokenAtSelection(selection: DocumentSelection, cancelSignal: CancellationSignal): Promise<GenerationResponse> {
+    // For alternatives, we reuse existing gen params, but we only need one token. No need to drain Kuru's budget
+    const generationParams = await api.v1.generationParameters.get();
+    generationParams.max_tokens = 1;
+
+    const contextMessages = await buildContextUpToSelectionStart(selection);
+    const generation = await api.v1.generate(
+        contextMessages,
+        generationParams,
+        undefined, // No callback needed
+        "blocking", // blocking behaviour as the user is not expected to do anything else while waiting
+        cancelSignal,
+    );
+    return generation;
+}
+
+/**
+ * Assembles context messages up to the selection start.
+ * Since there may be some trailing whitespaces before the selection, we must offset the position back to the last non-whitespace character,
+ * as otherwise they would be included in the context and affect the generation.
+ */
+async function buildContextUpToSelectionStart(selection: DocumentSelection): Promise<Message[]> {
+    // We check how many trailing whitespaces are there before the selection start, and offset back accordingly
+    const textBeforeSelection = await api.v1.document.textFromSelection({
+        from: { sectionId: selection.from.sectionId }, // without specifying offset means from start of section
+        to: selection.from // this one specifies both sectionId and offset (which is selection start)
+    });
+    const trailingWhitespaceMatch = textBeforeSelection.match(/\s+$/);
+    let finalOffset = selection.from.offset;
+    if (trailingWhitespaceMatch !== null) {
+        finalOffset -= trailingWhitespaceMatch[0].length;
+    }
+
+    const messages = await api.v1.buildContext({
+        position: { sectionId: selection.from.sectionId, offset: finalOffset }
+        // We could suppress other scripts here with suppressScriptHooks: "all", but maybe they are
+        // inserting story-relevant context? So we don't touch that.
+    });
+    return messages;
+}
+
+/**
+ * Creates a word alternative button for the given modal handler, selection, and alternative text.
+ * When clicked, it replaces the selection with the alternative text and closes the modal.
+ * The button's text shows the alternative and its probability in percentages.
+ * The button color transitions from blue (0%) to red (100%) based on probability.
+ */
+function createWordAlternativeButton(
+    modal: { close: () => Promise<void> },
+    selection: DocumentSelection,
+    alternative: { text: string, probability: number }
+): UIPartButton {
+    // Calculate color based on probability (0-1)
+    // Blue (0%) -> Red (100%)
+    const red = Math.round(alternative.probability * 255);
+    const blue = Math.round((1 - alternative.probability) * 255);
+    const backgroundColor = `rgb(${red}, 0, ${blue})`;
+
+    return api.v1.ui.part.button({
+        text: alternative.text + ` (${(alternative.probability * 100).toFixed(2)}%)`,
+        callback: async () => {
+            await replaceSelection(selection, alternative.text);
+            await modal.close();
+        },
+        style: {
+            width: "100%",
+            textAlign: "left",
+            backgroundColor: backgroundColor,
+            color: "white" // Ensure text is readable
+        }
+    });
+}
+
+/**
+ * Given a generation response, extracts the alternatives (text + probability).
+ * The returned array is sorted by probability descending.
+ */
+function getAlternativesFromGeneration(generation: GenerationResponse): { text: string, probability: number }[] {
+    const novelAILogprobs: Logprobs[] | undefined = generation.choices[0].convertedLogprobs;
+    if (novelAILogprobs === undefined || novelAILogprobs.length === 0) {
+        throw new Error("No logprobs returned from the model for word alternatives.");
+    }
+    const nextTokenLogprobs = novelAILogprobs[0];
+    api.v1.log("Next token logprobs:", nextTokenLogprobs);
+
+    // If possible, we are interested in "afters" logprobs, as they represent post-sampling probabilities.
+    // If not available, we can fall back to "befores".
+    const alternatives: { text: string, probability: number }[] = [];
+    const logprobsSource = nextTokenLogprobs.afters.length > 0 ? nextTokenLogprobs.afters : nextTokenLogprobs.befores;
+    for (const token of logprobsSource) {
+        const text = token.str;
+        // Again, if possible, use "after" prob, else "before". If nothing works, assume 0 probability
+        const probabilitySource = token.pAfter ?? token.pBefore;
+        const probability = probabilitySource ?? 0;
+        alternatives.push({ text, probability });
+    }
+
+    // Chosen token gets its own key, so we add it too
+    const chosenToken = nextTokenLogprobs.chosen;
+    const chosenText = chosenToken.str;
+    const chosenProbabilitySource = chosenToken.pAfter ?? chosenToken.pBefore;
+    const chosenProbability = chosenProbabilitySource ?? 0;
+    alternatives.push({ text: chosenText, probability: chosenProbability });
+
+    // Sort by probability descending
+    alternatives.sort((a, b) => b.probability - a.probability);
+    return alternatives;
+}
+
+/**
+ * Replaces the given selection with the provided alternative.
+ * It must account for the fact that the alternative may have a prefix whitespace, while the selection
+ * itself may have whitespaces at its edges around it.
+ * In this case, we follow these rules to preserve the user's whitespace intentions:
+ * 1. If the selection has trailing whitespaces and the alternative does not end with a whitespace,
+ * those trailing whitespaces are preserved in the final alternative.
+ * 2. If there are whitespaces before the selection and the alternative starts with a whitespace,
+ * the alternative's leading whitespace is removed.
+ * 
+ * Also, it requests the permission to update the document before performing the update.
+ */
+async function replaceSelection(selection: DocumentSelection, alternative: string): Promise<void> {
+    let finalAlternative = alternative;
+    const selectionText = await api.v1.document.textFromSelection(selection);
+
+    // Rule 1
+    const selectionTrailingWhitespaceMatch = selectionText.match(/\s+$/);
+    if (selectionTrailingWhitespaceMatch !== null && !finalAlternative.endsWith(" ")) {
+        finalAlternative += selectionTrailingWhitespaceMatch[0];
+    }
+
+    // Rule 2
+    const textBeforeSelection = await api.v1.document.textFromSelection({
+        from: { sectionId: selection.from.sectionId },
+        to: selection.from
+    });
+    const beforeSelectionTrailingWhitespaceMatch = textBeforeSelection.match(/\s+$/);
+    if (beforeSelectionTrailingWhitespaceMatch !== null && finalAlternative.startsWith(" ")) {
+        finalAlternative = finalAlternative.replace(/^\s+/, "");
+    }
+
+    // Requests permission to update the document. If already granted, this will just pass through.
+    const permission = await api.v1.permissions.request("documentEdit", "This script needs permission to edit the document to replace the selected word with the chosen alternative.");
+    if (!permission) {
+        api.v1.ui.toast("Permission to edit the document was denied. Cannot replace the selected word", { type: "error" });
+        return;
+    }
+
+    const textAfterSelection = await api.v1.document.textFromSelection({
+        from: selection.to,
+        to: { sectionId: selection.to.sectionId } // without offset means to end of section
+    });
+    await api.v1.document.updateParagraph(selection.from.sectionId, {
+        text: textBeforeSelection + finalAlternative + textAfterSelection
+    });
+}
+
+api.v1.ui.register([
+    api.v1.ui.extension.contextMenuButton({
+        id: 'word-alternatives',
+        text: "View Alternative Words",
+        callback: ({ selection }) => {
+            // This version supports updating only one paragraph at a time, so we notify the user if multiple paragraphs are selected.
+            // Not sure why anyone would want to replace multiple paragraphs with a single word alternative though.
+            if (selection.from.sectionId !== selection.to.sectionId) {
+                api.v1.ui.toast("Please select text within a single paragraph to view word alternatives.", { type: "warning" });
+                return;
+            }
+            openWordAlternativesModal(selection)
+        }
+    })
+])
